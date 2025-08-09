@@ -8,6 +8,8 @@ from gcode_parser import parse_gcode
 current_file = None
 editor = None  # Global editor referansı
 problems_tree = None  # Problems panelindeki Treeview
+status_var = None  # Status bar metni
+last_diag = {"errors": 0, "warnings": 0}
 
 def build_diagnostics_from_result(result):
     """parse_gcode sonucundan Problems paneli için teşhis listesi üretir."""
@@ -62,6 +64,30 @@ def on_problem_double_click(event=None):
     except Exception:
         pass
 
+def update_status(errors: int | None = None, warnings: int | None = None):
+    """Status bar (Ln, Col, Errors, Warnings, Lines) bilgisini günceller."""
+    global editor, status_var, last_diag
+    if editor is None or status_var is None:
+        return
+    try:
+        idx = editor.index("insert")
+        line_s, col_s = idx.split(".")
+        line = int(line_s)
+        col = int(col_s) + 1
+        total_lines = int(editor.index('end-1c').split('.')[0])
+    except Exception:
+        line = 1
+        col = 1
+        total_lines = 1
+    if errors is None or warnings is None:
+        errors = last_diag.get("errors", 0) if errors is None else errors
+        warnings = last_diag.get("warnings", 0) if warnings is None else warnings
+    status_var.set(f"Ln {line}, Col {col}    Errors: {errors}  Warnings: {warnings}  Lines: {total_lines}")
+
+def on_editor_activity(event=None):
+    """Editörde klavye/tıklama gibi hareketlerde status bar'ı güncelle."""
+    update_status()
+
 def check_syntax():
     """
     Editördeki G-code'un sözdizimini kontrol eder.
@@ -86,6 +112,10 @@ def check_syntax():
         populate_problems(result)
         errors = diag.get('errors', 0)
         warnings = diag.get('warnings', 0)
+        # Son teşhisleri kaydet ve status bar'ı güncelle
+        global last_diag
+        last_diag = {"errors": errors, "warnings": warnings}
+        update_status(errors=errors, warnings=warnings)
         if errors == 0:
             if warnings:
                 messagebox.showinfo("Sözdizimi", f"Hata yok, {warnings} uyarı bulundu.")
@@ -200,7 +230,7 @@ if __name__ == "__main__":
 
     # Problems paneli
     problems_frame = tk.Frame(root)
-    problems_frame.pack(fill=tk.BOTH, expand=False, padx=5, pady=(0, 5))
+    problems_frame.pack(fill=tk.BOTH, expand=False, padx=5, pady=(0, 0))
     columns = ("type", "line", "message")
     problems_tree = ttk.Treeview(problems_frame, columns=columns, show="headings", height=6)
     problems_tree.heading("type", text="Type")
@@ -214,5 +244,18 @@ if __name__ == "__main__":
     problems_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     yscroll.pack(side=tk.RIGHT, fill=tk.Y)
     problems_tree.bind("<Double-1>", on_problem_double_click)
+
+    # Status bar (en alt)
+    status_frame = tk.Frame(root)
+    status_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=5, pady=5)
+    status_label = tk.Label(status_frame, anchor=tk.W)
+    status_label.pack(fill=tk.X)
+    status_var = tk.StringVar()
+    status_label.configure(textvariable=status_var)
+
+    # Editör etkinliklerine status güncellemesi bağla
+    editor.bind('<KeyRelease>', on_editor_activity, add=True)
+    editor.bind('<Button-1>', on_editor_activity, add=True)
+    update_status()
 
     root.mainloop()
