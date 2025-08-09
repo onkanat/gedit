@@ -2,167 +2,155 @@ def parse_gcode(code):
     """
     G-code metnini ayrıştırır ve yolları/layer bilgilerini döndürür.
     Modal komutlar, birim sistemi, koordinat sistemi ve spindle durumu gibi CNC modalitelerini izler.
-    :param code: str, G-code metni
-    :return: dict, {'paths': [...], 'layers': [...]}
+
+    Contract:
+    - Input: code (str)
+    - Output: dict with keys:
+        - 'paths': list[dict]  -> hareketler (rapid/feed/arc) ve tanılar (parse_error/unsupported/unknown_param vs.)
+        - 'layers': list[dict] -> layer bilgileri
+    - Her entry mümkünse 'line_no' ve 'line' (raw) içerir. Tanılar ek olarak 'message' içerir.
     """
-    paths = []
-    layers = []  # Katman bilgisi için
+    paths: list[dict] = []
+    layers: list[dict] = []
     lines = code.splitlines()
-    x, y, z = 0, 0, 0  # Current position
-    prev_x, prev_y, prev_z = 0, 0, 0  # Previous position
-    unit_scale = 1.0  # Default mm
+
+    x, y, z = 0.0, 0.0, 0.0
+    prev_x, prev_y, prev_z = 0.0, 0.0, 0.0
+    unit_scale = 1.0  # mm
     absolute_mode = True
     current_modal = {
-        'motion': 'G0',  # G0, G1, G2, G3
-        'plane': 'G17',  # G17, G18, G19
-        'units': 'G21',  # mm
-        'feed_mode': 'G94',  # units per minute
-        'coord_system': 'G54',  # Default coordinate system
-        'spindle': None,  # M3, M5, M6
+        'motion': 'G0',
+        'plane': 'G17',
+        'units': 'G21',
+        'feed_mode': 'G94',
+        'coord_system': 'G54',
+        'spindle': None,
     }
     current_layer = None
 
     def update_position(new_x, new_y, new_z):
-        """
-        CNC pozisyonunu günceller.
-        :param new_x: float
-        :param new_y: float
-        :param new_z: float
-        :return: tuple, yeni (x, y, z)
-        """
         nonlocal x, y, z, prev_x, prev_y, prev_z
         prev_x, prev_y, prev_z = x, y, z
         if absolute_mode:
             x, y, z = new_x, new_y, new_z
         else:
-            x += new_x
-            y += new_y
-            z += new_z
+            x, y, z = x + new_x, y + new_y, z + new_z
         return x, y, z
 
-    for line_no, line in enumerate(lines, start=1):
-        """
-        Her satırı işler, layer ve G-code komutlarını ayrıştırır.
-        """
-        original_line = line.strip()
-        # Katman/LAYER yorumlarını yakala
+    def add_diag(dtype: str, message: str, line_no: int, original_line: str, **extra):
+        entry = {'type': dtype, 'message': message, 'line_no': line_no, 'line': original_line}
+        entry.update(extra)
+        paths.append(entry)
+
+    for line_no, raw_line in enumerate(lines, start=1):
+        original_line = raw_line.strip()
         if original_line.startswith(';LAYER:'):
             try:
-                current_layer = int(original_line.split(':')[1])
+                current_layer = int(original_line.split(':', 1)[1])
                 layers.append({'layer': current_layer, 'paths': []})
             except Exception:
-                print(f"Warning: Invalid layer comment: {original_line}")
+                add_diag('parse_error', 'Invalid layer comment format', line_no, original_line)
             continue
-        # Satırdan yorumları kaldır
-        line = original_line.split(';')[0]
+
+        # Remove ; comments part
+        line = original_line.split(';', 1)[0]
         if not line:
             continue
 
-        words = []
-        current_word = ''
-
-        # Parse line into G-code words
-        for char in line:
-            if char.isalpha():
-                if current_word:
-                    words.append(current_word)
-                current_word = char
-            elif char.strip():
-                current_word += char
-        if current_word:
-            words.append(current_word)
+        # Tokenize into words (Letter + numeric)
+        words: list[str] = []
+        current = ''
+        for ch in line:
+            if ch.isalpha():
+                if current:
+                    words.append(current)
+                current = ch
+            elif ch.strip():
+                current += ch
+        if current:
+            words.append(current)
 
         motion_command = None
-        params = {}
+        params: dict = {}
+        line_has_motion = False
+        line_has_xyz = False
 
         for word in words:
             letter = word[0].upper()
             try:
                 value = float(word[1:])
                 if letter == 'G':
-                    code = int(float(word[1:]))
-                    if code in [0, 1, 2, 3]:
-                        motion_command = f'G{code}'
+                    gnum = int(value)
+                    if gnum in (0, 1, 2, 3):
+                        motion_command = f'G{gnum}'
                         current_modal['motion'] = motion_command
-                    elif code == 4:
-                        # G4: Dwell (bekleme)
+                        line_has_motion = True
+                    elif gnum == 4:
                         paths.append({'type': 'dwell', 'P': params.get('P', value), 'line': original_line, 'line_no': line_no})
-                    elif code == 17:
-                        current_modal['plane'] = 'G17'  # XY
-                    elif code == 18:
-                        current_modal['plane'] = 'G18'  # XZ
-                    elif code == 19:
-                        current_modal['plane'] = 'G19'  # YZ
-                    elif code == 20:
+                    elif gnum == 17:
+                        current_modal['plane'] = 'G17'
+                    elif gnum == 18:
+                        current_modal['plane'] = 'G18'
+                    elif gnum == 19:
+                        current_modal['plane'] = 'G19'
+                    elif gnum == 20:
                         current_modal['units'] = 'G20'
-                        unit_scale = 25.4  # inch to mm
-                    elif code == 21:
+                        unit_scale = 25.4
+                    elif gnum == 21:
                         current_modal['units'] = 'G21'
                         unit_scale = 1.0
-                    elif code == 28:
-                        # G28: Home
+                    elif gnum == 28:
                         paths.append({'type': 'home', 'start': (x, y, z), 'line': original_line, 'line_no': line_no})
-                    elif code == 90:
+                    elif gnum == 90:
                         absolute_mode = True
-                    elif code == 91:
+                    elif gnum == 91:
                         absolute_mode = False
-                    elif code == 94:
-                        # G94: Feed per minute (modal)
+                    elif gnum == 94:
                         current_modal['feed_mode'] = 'G94'
-                        # Not an unsupported command, just update modal state
-                    elif 54 <= code <= 59:
-                        current_modal['coord_system'] = f'G{code}'
+                    elif 54 <= gnum <= 59:
+                        current_modal['coord_system'] = f'G{gnum}'
                     else:
-                        print(f"Warning: Unsupported G-code: G{code} in line: {original_line}")
-                        paths.append({'type': 'unsupported', 'code': f'G{code}', 'line': original_line, 'line_no': line_no})
+                        add_diag('unsupported', f'Unsupported G-code G{gnum}', line_no, original_line, code=f'G{gnum}')
                 elif letter == 'M':
-                    mcode = int(float(word[1:]))
-                    if mcode in [3, 4, 5, 6]:
-                        current_modal['spindle'] = f'M{mcode}'
-                        paths.append({'type': 'spindle', 'code': f'M{mcode}', 'line': original_line, 'line_no': line_no})
-                    elif mcode in [0, 1]:
-                        # Optional/Program stop
-                        paths.append({'type': 'pause', 'code': f'M{mcode}', 'line': original_line, 'line_no': line_no})
-                    elif mcode == 2:
-                        # Program end
+                    mnum = int(value)
+                    if mnum in (3, 4, 5, 6):
+                        current_modal['spindle'] = f'M{mnum}'
+                        paths.append({'type': 'spindle', 'code': f'M{mnum}', 'line': original_line, 'line_no': line_no})
+                    elif mnum in (0, 1):
+                        paths.append({'type': 'pause', 'code': f'M{mnum}', 'line': original_line, 'line_no': line_no})
+                    elif mnum == 2:
                         paths.append({'type': 'program_end', 'code': 'M2', 'line': original_line, 'line_no': line_no})
-                    elif mcode == 30:
-                        # M30: Program end (not unsupported, just mark)
+                    elif mnum == 30:
                         paths.append({'type': 'program_end', 'code': 'M30', 'line': original_line, 'line_no': line_no})
-                    elif mcode in [7, 8, 9]:
-                        # Coolant control
-                        paths.append({'type': 'coolant', 'code': f'M{mcode}', 'line': original_line, 'line_no': line_no})
+                    elif mnum in (7, 8, 9):
+                        paths.append({'type': 'coolant', 'code': f'M{mnum}', 'line': original_line, 'line_no': line_no})
                     else:
-                        print(f"Warning: Unsupported M-code: M{mcode} in line: {original_line}")
-                        paths.append({'type': 'unsupported', 'code': f'M{mcode}', 'line': original_line, 'line_no': line_no})
-                elif letter in ['X', 'Y', 'Z', 'I', 'J', 'K', 'R']:
+                        add_diag('unsupported', f'Unsupported M-code M{mnum}', line_no, original_line, code=f'M{mnum}')
+                elif letter in ('X', 'Y', 'Z', 'I', 'J', 'K', 'R'):
                     params[letter] = value * unit_scale
-                elif letter in ['F', 'S', 'P', 'Q', 'E', 'D', 'H', 'L', 'T']:
+                    if letter in ('X', 'Y', 'Z'):
+                        line_has_xyz = True
+                elif letter in ('F', 'S', 'P', 'E', 'D', 'H', 'L', 'T'):
                     params[letter] = value
                 else:
-                    print(f"Warning: Unknown parameter: {word} in line: {original_line}")
-                    paths.append({'type': 'unknown_param', 'param': word, 'line': original_line, 'line_no': line_no})
+                    add_diag('unknown_param', f"Unknown parameter letter '{letter}' in '{word}'", line_no, original_line, param=word)
             except ValueError:
-                print(f"Warning: Invalid value in word: {word} in line: {original_line}")
-                paths.append({'type': 'parse_error', 'word': word, 'line': original_line, 'line_no': line_no})
+                bad = word[1:] if len(word) > 1 else ''
+                add_diag('parse_error', f"Invalid numeric value for '{letter}': '{bad}'", line_no, original_line, word=word, param=letter)
                 continue
             except IndexError:
-                print(f"Warning: Invalid word format: {word} in line: {original_line}")
-                paths.append({'type': 'parse_error', 'word': word, 'line': original_line, 'line_no': line_no})
+                add_diag('parse_error', f"Invalid word format: '{word}'", line_no, original_line, word=word)
                 continue
 
-
-        # Use modal motion command if none specified
         if not motion_command:
             motion_command = current_modal['motion']
 
-        # Process motion command
-        if motion_command in ['G0', 'G1', 'G2', 'G3']:
+        if (line_has_motion or line_has_xyz) and motion_command in ('G0', 'G1', 'G2', 'G3'):
             new_x = params.get('X') if params.get('X') is not None else x
             new_y = params.get('Y') if params.get('Y') is not None else y
             new_z = params.get('Z') if params.get('Z') is not None else z
 
-            if motion_command in ['G0', 'G1']:
+            if motion_command in ('G0', 'G1'):
                 path_type = 'rapid' if motion_command == 'G0' else 'feed'
                 path_obj = {
                     'type': path_type,
@@ -173,32 +161,31 @@ def parse_gcode(code):
                     'coord_system': current_modal['coord_system'],
                     'layer': current_layer,
                     'line_no': line_no,
-                    'line': original_line
+                    'line': original_line,
                 }
                 paths.append(path_obj)
                 if layers:
                     layers[-1]['paths'].append(path_obj)
-            elif motion_command in ['G2', 'G3']:
+            else:  # G2/G3
                 arc_type = 'clockwise' if motion_command == 'G2' else 'counter_clockwise'
                 radius = params.get('R')
-                i_val = params.get('I') if isinstance(params.get('I'), (int, float)) else 0
-                j_val = params.get('J') if isinstance(params.get('J'), (int, float)) else 0
-                k_val = params.get('K') if isinstance(params.get('K'), (int, float)) else 0
-
+                has_i, has_j, has_k = ('I' in params), ('J' in params), ('K' in params)
+                i_val = params.get('I') if has_i and isinstance(params.get('I'), (int, float)) else None
+                j_val = params.get('J') if has_j and isinstance(params.get('J'), (int, float)) else None
+                k_val = params.get('K') if has_k and isinstance(params.get('K'), (int, float)) else None
                 plane = current_modal['plane']
-                # Plane'e göre 2B merkez bileşenlerini seç
                 if plane == 'G18':  # XZ
-                    crx, cry = i_val, k_val
+                    crx, cry = (i_val or 0.0), (k_val or 0.0)
+                    has_center = has_i or has_k
                 elif plane == 'G19':  # YZ
-                    crx, cry = j_val, k_val
-                else:  # G17 XY (varsayılan)
-                    crx, cry = i_val, j_val
-
-                # Yarıçap verilmemişse düzlemdeki I/J/K'dan hesapla
-                if radius is None and (isinstance(crx, (int, float)) and isinstance(cry, (int, float))):
-                    radius = (crx**2 + cry**2)**0.5
-
-                if isinstance(radius, (int, float)):
+                    crx, cry = (j_val or 0.0), (k_val or 0.0)
+                    has_center = has_j or has_k
+                else:  # G17
+                    crx, cry = (i_val or 0.0), (j_val or 0.0)
+                    has_center = has_i or has_j
+                if radius is None and has_center:
+                    radius = (crx ** 2 + cry ** 2) ** 0.5
+                if isinstance(radius, (int, float)) and radius > 0:
                     path_obj = {
                         'type': 'arc',
                         'arc_type': arc_type,
@@ -212,11 +199,13 @@ def parse_gcode(code):
                         'coord_system': current_modal['coord_system'],
                         'layer': current_layer,
                         'line_no': line_no,
-                        'line': original_line
+                        'line': original_line,
                     }
                     paths.append(path_obj)
                     if layers:
                         layers[-1]['paths'].append(path_obj)
+                else:
+                    add_diag('parse_error', 'Arc (G2/G3) requires R>0 or appropriate I/J/K values (per plane).', line_no, original_line, motion=motion_command)
 
             update_position(new_x, new_y, new_z)
 

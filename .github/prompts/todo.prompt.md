@@ -61,6 +61,7 @@ M4 – Parser hardening
 M5 – Docs & examples
 - Add a second sample: pocketing + arcs; include screenshots.
 - Short troubleshooting FAQ for common macOS Tcl/Tk issues.
+Status: In progress (EXAMPLE_POCKET.nc eklendi; README’ye iki örnek ve Troubleshooting FAQ maddeleri işlendi. Ekran görüntüleri için placeholder yapısı README’de mevcut.)
 
 ## Implementation Notes
 - Reuse existing annotate_parse_result contract; expose a get_diagnostics() method if needed.

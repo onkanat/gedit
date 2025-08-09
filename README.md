@@ -80,9 +80,12 @@ docs/
 ![2D Preview](docs/screenshots/preview-2d.png)
 ![3D Preview](docs/screenshots/preview-3d.png)
 
-## G-code Örneği
+## G-code Örnekleri
 
-`DENEME.nc` dosyasındaki basit örnek ve sonsuz işareti (lemniscate) örneğine bakabilirsiniz.
+- `DENEME.nc`: Sonsuz işareti (lemniscate) yaylarıyla basit demo.
+- `EXAMPLE_POCKET.nc`: Kavisli köşeli kare dış kontur (R ile) ve içeride basit bir pocket spiral.
+
+Bu dosyaları File > Open ile açıp "Preview" diyerek 2D/3D izlerini görebilirsiniz.
 
 ## Geliştirme İpuçları
 
@@ -94,6 +97,8 @@ docs/
 
 - Matplotlib/Tk entegrasyonu için sisteminizde uygun Tcl/Tk bulunmalıdır (macOS genellikle yeterlidir). Eksikse Python’u resmi dağıtımdan kurmayı veya `brew install tcl-tk` sonrası uygun `PATH` ayarlarını yapmayı değerlendirebilirsiniz.
 - 3D penceresi açılmıyorsa bağımlılıkları tekrar kurun ve terminalde hataları kontrol edin.
+- macOS’ta Tk sürümü eskiyse menüler veya pencereler donuk görünebilir; Python’u `python.org` dağıtımından kurmak çoğu zaman düzeltir.
+- Arc (G2/G3) hataları için: Parser R>0 veya düzleme uygun I/J/K parametreleri bekler; satırdaki sayısal değerleri kontrol edin.
 
 ## Copilot Yönergeleri
 
