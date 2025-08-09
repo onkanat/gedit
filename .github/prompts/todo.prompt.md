@@ -1,8 +1,5 @@
----
 mode: agent
-model: gpt-5
 description: CNC G-code Editor & Previewer – actionable roadmap and acceptance criteria for upcoming improvements.
----
 
 # Task: Ship a robust, user-friendly G-code editor with diagnostics and previews
 
@@ -61,7 +58,7 @@ M4 – Parser hardening
 M5 – Docs & examples
 - Add a second sample: pocketing + arcs; include screenshots.
 - Short troubleshooting FAQ for common macOS Tcl/Tk issues.
-Status: In progress (EXAMPLE_POCKET.nc eklendi; README’ye iki örnek ve Troubleshooting FAQ maddeleri işlendi. Ekran görüntüleri için placeholder yapısı README’de mevcut.)
+Status: Done (EXAMPLE_POCKET.nc eklendi; README’de örnekler ve Troubleshooting güncellendi; ekran görüntüleri dokümana referanslandı; Copilot yönergeleri dosyası düzeltildi.)
 
 ## Implementation Notes
 - Reuse existing annotate_parse_result contract; expose a get_diagnostics() method if needed.

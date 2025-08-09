@@ -65,14 +65,7 @@ python app/main.py
 
 Aşağıdaki görselleri `docs/screenshots` klasörüne yerleştirin (ör. PNG/GIF). Dosya adları örnektir; dilediğiniz gibi adlandırabilirsiniz.
 
-```text
-docs/
-	screenshots/
-		editor.png
-		preview-2d.png
-		preview-3d.png
-		demo.gif
-```
+Önerilen dizin yapısı: docs/screenshots klasöründe editor.png, preview-2d.png, preview-3d.png, demo.gif dosyaları.
 
 Örnek yer tutucular:
 
@@ -102,7 +95,7 @@ Bu dosyaları File > Open ile açıp "Preview" diyerek 2D/3D izlerini görebilir
 
 ## Copilot Yönergeleri
 
-Bu depo için Copilot çalışma kuralları `.github/copilot-instructe.md` dosyasında özetlenmiştir.
+Bu depo için Copilot çalışma kuralları `.github/copilot-instructions.md` dosyasında özetlenmiştir.
 
 ## Lisans
 

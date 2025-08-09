@@ -171,13 +171,29 @@ class GCodeEditor(tk.Text):
         Otomatik tamamlama öneri penceresini gösterir veya günceller.
         :param suggestions: list, öneri anahtarları
         """
+        # Yardımcı: Görüntülenecek metni kısalt (uzun açıklamalar pencereyi taşırmasın)
+        def _display_text(key: str, max_len: int = 60) -> str:
+            desc = str(self.keywords.get(key, ''))
+            text = f"{key} - {desc}"
+            if len(text) > max_len:
+                return text[: max_len - 1] + '…'
+            return text
+
+        # Kısa metinleri önceden hazırla ve genişlik/uzunluk sınırlarını hesapla
+        display_items = [_display_text(k) for k in suggestions]
+        width_chars = max((len(s) for s in display_items), default=24)
+        width_chars = max(24, min(50, width_chars))  # 24..50 karakter arası sabitle
+        height_rows = min(len(display_items), 8)     # en fazla 8 satır göster
         # Pencere zaten varsa sadece güncelle
         if self.suggestions_window and self.suggestions_window.winfo_exists() and self._suggestion_listbox:
             listbox = self._suggestion_listbox
             listbox.delete(0, tk.END)
-            for suggestion in suggestions:
-                display_text = f"{suggestion} - {self.keywords[suggestion]}"
+            for display_text in display_items:
                 listbox.insert(tk.END, display_text)
+            try:
+                listbox.configure(width=width_chars, height=height_rows)
+            except Exception:
+                pass
             listbox.selection_set(0)
             listbox.see(0)
             return
@@ -204,17 +220,28 @@ class GCodeEditor(tk.Text):
         listbox = tk.Listbox(self.suggestions_window,
                              selectmode=tk.SINGLE,
                              activestyle='none',
-                             height=min(len(suggestions), 10),
-                             width=max(40, max(len(f"{s} - {self.keywords[s]}") for s in suggestions)),
+                             height=height_rows,
+                             width=width_chars,
                              font=self['font'])
         listbox.pack(fill=tk.BOTH, expand=True)
-        for suggestion in suggestions:
-            display_text = f"{suggestion} - {self.keywords[suggestion]}"
+        for display_text in display_items:
             listbox.insert(tk.END, display_text)
         if listbox.size() > 0:
             listbox.selection_set(0)
             listbox.see(0)
         self._suggestion_listbox = listbox
+        # Pencere boyutunu/konumunu ekrana göre sınırla
+        self.suggestions_window.update_idletasks()
+        req_w = self.suggestions_window.winfo_reqwidth()
+        req_h = self.suggestions_window.winfo_reqheight()
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        # Sağ kenardan taşarsa sola doğru kaydır
+        if x + req_w > screen_w - 8:
+            x = max(0, screen_w - req_w - 8)
+        # Alt kenardan taşarsa caret üstüne yerleştir
+        if y + req_h > screen_h - 8:
+            y = max(0, y - req_h - (h if isinstance(h, int) else 0) - 4)
         self.suggestions_window.geometry(f"+{x}+{y}")
         listbox.bind('<Double-Button-1>', self.apply_selected_suggestion)
         listbox.bind('<Return>', self.apply_selected_suggestion)
