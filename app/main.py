@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 from gui import create_main_window
 from editor import create_text_editor
 from preview import show_preview
@@ -7,6 +7,60 @@ from gcode_parser import parse_gcode
 
 current_file = None
 editor = None  # Global editor referansı
+problems_tree = None  # Problems panelindeki Treeview
+
+def build_diagnostics_from_result(result):
+    """parse_gcode sonucundan Problems paneli için teşhis listesi üretir."""
+    diags = []
+    if not isinstance(result, dict):
+        return diags
+    for p in result.get('paths') or []:
+        ptype = p.get('type')
+        line_no = p.get('line_no')
+        if ptype in ("parse_error", "unsupported", "unknown_param") and isinstance(line_no, int):
+            msg = p.get('message') or p.get('raw') or ptype
+            diags.append({"type": ptype, "line": line_no, "message": str(msg)})
+    return diags
+
+def clear_problems():
+    """Problems panelini temizler."""
+    global problems_tree
+    if problems_tree is None:
+        return
+    for i in problems_tree.get_children():
+        problems_tree.delete(i)
+
+def populate_problems(result):
+    """Problems panelini parse sonucuna göre doldurur."""
+    global problems_tree
+    if problems_tree is None:
+        return
+    clear_problems()
+    for d in build_diagnostics_from_result(result):
+        problems_tree.insert("", tk.END, values=(d["type"], d["line"], d["message"]))
+
+def on_problem_double_click(event=None):
+    """Problems panelindeki bir satıra çift tıklandığında ilgili satıra git."""
+    global problems_tree, editor
+    if problems_tree is None or editor is None:
+        return
+    sel = problems_tree.selection()
+    if not sel:
+        return
+    item = problems_tree.item(sel[0])
+    values = item.get('values') or []
+    if len(values) < 2:
+        return
+    try:
+        line_no = int(values[1])
+    except Exception:
+        return
+    try:
+        editor.mark_set("insert", f"{line_no}.0")
+        editor.see(f"{line_no}.0")
+        editor.focus_set()
+    except Exception:
+        pass
 
 def check_syntax():
     """
@@ -28,6 +82,8 @@ def check_syntax():
         result = parse_gcode(content)
         # Editörde satırları işaretle
         diag = editor.annotate_parse_result(result) if (editor is not None and hasattr(editor, 'annotate_parse_result')) else {'errors': 0, 'warnings': 0}
+        # Problems panelini doldur
+        populate_problems(result)
         errors = diag.get('errors', 0)
         warnings = diag.get('warnings', 0)
         if errors == 0:
@@ -141,5 +197,22 @@ if __name__ == "__main__":
     tk.Button(button_frame, text="Check Syntax", command=check_syntax).pack(side=tk.LEFT, padx=5)
     tk.Button(button_frame, text="Preview", command=lambda: show_preview(editor, root)).pack(side=tk.LEFT, padx=5)
     tk.Button(button_frame, text="Save As...", command=save_file_as).pack(side=tk.LEFT, padx=5)
+
+    # Problems paneli
+    problems_frame = tk.Frame(root)
+    problems_frame.pack(fill=tk.BOTH, expand=False, padx=5, pady=(0, 5))
+    columns = ("type", "line", "message")
+    problems_tree = ttk.Treeview(problems_frame, columns=columns, show="headings", height=6)
+    problems_tree.heading("type", text="Type")
+    problems_tree.heading("line", text="Line")
+    problems_tree.heading("message", text="Message")
+    problems_tree.column("type", width=120, anchor=tk.W)
+    problems_tree.column("line", width=60, anchor=tk.CENTER)
+    problems_tree.column("message", width=600, anchor=tk.W)
+    yscroll = ttk.Scrollbar(problems_frame, orient="vertical", command=problems_tree.yview)
+    problems_tree.configure(yscrollcommand=yscroll.set)
+    problems_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    yscroll.pack(side=tk.RIGHT, fill=tk.Y)
+    problems_tree.bind("<Double-1>", on_problem_double_click)
 
     root.mainloop()
