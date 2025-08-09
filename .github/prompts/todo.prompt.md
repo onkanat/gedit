@@ -52,6 +52,7 @@ M2 – Status bar
 M3 – Preview polish
 - Add optional legend and visibility toggles for rapid/feed/arc in 2D/3D.
 - Smooth scaling transitions; keep last plane choice between openings.
+Status: Done (legend + Rapid/Feed/Arc filtreleri eklendi; 2D ölçek geçişi yumuşatıldı; son düzlem seçimi oturum boyunca hatırlanıyor.)
 
 M4 – Parser hardening
 - Add tests for edge cases (missing IJK and R, large radii, invalid params) as lightweight scripts.

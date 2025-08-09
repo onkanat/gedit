@@ -5,7 +5,11 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.lines import Line2D
 import numpy as np
+
+# Oturum boyunca 2D düzlem seçimini hatırla
+_LAST_PLANE_SELECTION = "Auto"
 
 def show_preview(editor, root):
     """
@@ -33,9 +37,18 @@ def show_preview(editor, root):
     ctrl_frame = tk.Frame(preview_window_2d)
     ctrl_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
     tk.Label(ctrl_frame, text="2D Düzlem:").pack(side=tk.LEFT)
-    plane_var = tk.StringVar(value="Auto")
+    global _LAST_PLANE_SELECTION
+    plane_var = tk.StringVar(value=_LAST_PLANE_SELECTION)
     plane_options = ["Auto", "G17 (XY)", "G18 (XZ)", "G19 (YZ)"]
     tk.OptionMenu(ctrl_frame, plane_var, *plane_options).pack(side=tk.LEFT, padx=8)
+
+    # Görünürlük anahtarları
+    show_rapid = tk.BooleanVar(value=True)
+    show_feed = tk.BooleanVar(value=True)
+    show_arc = tk.BooleanVar(value=True)
+    tk.Checkbutton(ctrl_frame, text="Rapid (G0)", variable=show_rapid, command=lambda: on_filter_change()).pack(side=tk.LEFT, padx=6)
+    tk.Checkbutton(ctrl_frame, text="Feed (G1)", variable=show_feed, command=lambda: on_filter_change()).pack(side=tk.LEFT, padx=6)
+    tk.Checkbutton(ctrl_frame, text="Arc (G2/G3)", variable=show_arc, command=lambda: on_filter_change()).pack(side=tk.LEFT, padx=6)
 
     canvas_2d = tk.Canvas(preview_window_2d, width=600, height=400, bg="white")
     canvas_2d.pack(padx=10, pady=10)
@@ -133,6 +146,28 @@ def show_preview(editor, root):
         y_offset = 200 - (min_y + max_y) * scale / 2
         return scale, x_offset, y_offset
 
+    # Yumuşak geçiş için son ölçek/ofset değerleri
+    last_scale = {"scale": 0.0, "x": 0.0, "y": 0.0, "initialized": False}
+
+    def draw_legend2d():
+        canvas_2d.delete("legend")
+        x0, y0 = 10, 10
+        dy = 18
+        entries = []
+        if show_rapid.get():
+            entries.append(("Rapid", "blue", True))
+        if show_feed.get():
+            entries.append(("Feed", "red", False))
+        if show_arc.get():
+            entries.append(("Arc", "green", False))
+        for i, (label, color, dashed) in enumerate(entries):
+            y = y0 + i * dy
+            if dashed:
+                canvas_2d.create_line(x0, y, x0+24, y, fill=color, dash=(4, 4), width=2, tags="legend")
+            else:
+                canvas_2d.create_line(x0, y, x0+24, y, fill=color, width=2, tags="legend")
+            canvas_2d.create_text(x0+30, y, text=label, anchor=tk.W, font=("Arial", 9), tags="legend")
+
     def draw_2d(paths, forced_plane: str | None):
         if forced_plane == 'G18':
             draw_grid(("X", "Z"))
@@ -143,6 +178,14 @@ def show_preview(editor, root):
         canvas_2d.delete("paths2d")
         min_x, max_x, min_y, max_y, _, _ = compute_bounds(paths, forced_plane)
         scale, x_offset, y_offset = compute_scale_and_offset(min_x, max_x, min_y, max_y)
+        # Yumuşatma: önceki ölçeğe/offsete doğru harmanla
+        if last_scale["initialized"]:
+            alpha = 0.6
+            scale = alpha * scale + (1 - alpha) * last_scale["scale"]
+            x_offset = alpha * x_offset + (1 - alpha) * last_scale["x"]
+            y_offset = alpha * y_offset + (1 - alpha) * last_scale["y"]
+        last_scale["scale"], last_scale["x"], last_scale["y"] = float(scale), float(x_offset), float(y_offset)
+        last_scale["initialized"] = True
         for path in paths:
             if not (isinstance(path, dict) and 'start' in path and 'end' in path and 'type' in path):
                 continue
@@ -157,6 +200,8 @@ def show_preview(editor, root):
             sx2, sy2 = project2d((start_x, start_y, start_z), plane)
             ex2, ey2 = project2d((end_x, end_y, end_z), plane)
             if path['type'] == 'rapid':
+                if not show_rapid.get():
+                    continue
                 canvas_2d.create_line(
                     sx2 * scale + x_offset,
                     sy2 * scale + y_offset,
@@ -167,6 +212,8 @@ def show_preview(editor, root):
                     tags="paths2d"
                 )
             elif path['type'] == 'feed':
+                if not show_feed.get():
+                    continue
                 canvas_2d.create_line(
                     sx2 * scale + x_offset,
                     sy2 * scale + y_offset,
@@ -176,6 +223,8 @@ def show_preview(editor, root):
                     tags="paths2d"
                 )
             elif path['type'] == 'arc' and 'radius' in path and 'center_relative' in path and 'arc_type' in path:
+                if not show_arc.get():
+                    continue
                 crx, cry = path['center_relative']
                 if plane == 'G18':  # XZ
                     center_x, center_y = start_x + crx, start_z + cry
@@ -214,11 +263,120 @@ def show_preview(editor, root):
                     width=2,
                     tags="paths2d"
                 )
+        draw_legend2d()
 
-    # Başlangıçta Auto çizim
+    # 3D çizimi fonksiyona al (toggle ile yeniden çizmek için)
+    def draw_3d(paths):
+        ax.cla()
+        # Görünür türler
+        want_rapid = show_rapid.get()
+        want_feed = show_feed.get()
+        want_arc = show_arc.get()
+        # Sınırları hesapla
+        min_x, max_x, min_y, max_y, min_z, max_z = compute_bounds(paths, None)
+        for path in paths:
+            if not (isinstance(path, dict) and 'start' in path and 'end' in path and 'type' in path):
+                continue
+            try:
+                start_x, start_y, start_z = path['start']
+                end_x, end_y, end_z = path['end']
+            except Exception:
+                continue
+            if not all(isinstance(v, (int, float)) for v in [start_x, start_y, start_z, end_x, end_y, end_z]):
+                continue
+            plane = path.get('plane', 'G17')
+            if path['type'] == 'rapid' and want_rapid:
+                ax.plot([start_x, end_x], [start_y, end_y], [start_z, end_z], color='b', linestyle='--')
+            elif path['type'] == 'feed' and want_feed:
+                ax.plot([start_x, end_x], [start_y, end_y], [start_z, end_z], color='r', linestyle='-')
+            elif path['type'] == 'arc' and want_arc and 'radius' in path and 'center_relative' in path and 'arc_type' in path:
+                crx, cry = path['center_relative']
+                radius = path['radius']
+                if not isinstance(radius, (int, float)):
+                    continue
+                if plane == 'G18':  # XZ
+                    center_x, center_y = start_x + crx, start_z + cry
+                    s_u, s_v = start_x, start_z
+                    e_u, e_v = end_x, end_z
+                elif plane == 'G19':  # YZ
+                    center_x, center_y = start_y + crx, start_z + cry
+                    s_u, s_v = start_y, start_z
+                    e_u, e_v = end_y, end_z
+                else:  # G17 XY
+                    center_x, center_y = start_x + crx, start_y + cry
+                    s_u, s_v = start_x, start_y
+                    e_u, e_v = end_x, end_y
+                start_angle_rad = math.atan2(s_v - center_y, s_u - center_x)
+                end_angle_rad = math.atan2(e_v - center_y, e_u - center_x)
+                if path['arc_type'] == 'clockwise':
+                    if end_angle_rad > start_angle_rad:
+                        end_angle_rad -= 2 * np.pi
+                else:
+                    if start_angle_rad > end_angle_rad:
+                        start_angle_rad -= 2 * np.pi
+                theta = np.linspace(start_angle_rad, end_angle_rad, 100)
+                if plane == 'G18':  # XZ
+                    xs = center_x + radius * np.cos(theta)
+                    zs = center_y + radius * np.sin(theta)
+                    ys = np.linspace(start_y, end_y, 100)
+                    ax.plot(xs, ys, zs, color='g')
+                elif plane == 'G19':  # YZ
+                    ys = center_x + radius * np.cos(theta)
+                    zs = center_y + radius * np.sin(theta)
+                    xs = np.linspace(start_x, end_x, 100)
+                    ax.plot(xs, ys, zs, color='g')
+                else:  # G17 XY
+                    xs = center_x + radius * np.cos(theta)
+                    ys = center_y + radius * np.sin(theta)
+                    zs = np.linspace(start_z, end_z, 100)
+                    ax.plot(xs, ys, zs, color='g')
+        # 3D görünüm ayarları ve sınırlar
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        if any(v in (float('inf'), float('-inf')) for v in [min_x, max_x, min_y, max_y, min_z, max_z]):
+            min_x = min_y = min_z = -50
+            max_x = max_y = max_z = 50
+        max_range = max(max_x - min_x, max_y - min_y, max_z - min_z) or 1.0
+        mid_x = (max_x + min_x) * 0.5
+        mid_y = (max_y + min_y) * 0.5
+        mid_z = (max_z + min_z) * 0.5
+        ax.set_xlim(mid_x - max_range * 0.5, mid_x + max_range * 0.5)
+        ax.set_ylim(mid_y - max_range * 0.5, mid_y + max_range * 0.5)
+        ax.set_zlim(mid_z - max_range * 0.5, mid_z + max_range * 0.5)
+        ax.grid(True)
+        # Legend: sadece açık olanları göster
+        handles = []
+        if show_rapid.get():
+            handles.append(Line2D([0], [0], color='b', linestyle='--', label='Rapid (G0)'))
+        if show_feed.get():
+            handles.append(Line2D([0], [0], color='r', linestyle='-', label='Feed (G1)'))
+        if show_arc.get():
+            handles.append(Line2D([0], [0], color='g', linestyle='-', label='Arc (G2/G3)'))
+        if handles:
+            ax.legend(handles=handles, loc='upper right')
+        canvas_3d.draw()
+
+    # Başlangıçta çizimler
     draw_2d(paths, None)
+    draw_3d(paths)
 
     def on_plane_change(*_):
+        global _LAST_PLANE_SELECTION
+        sel = plane_var.get()
+        forced = None
+        if sel.startswith('G17') or sel == 'G17 (XY)':
+            forced = 'G17'
+        elif sel.startswith('G18') or sel == 'G18 (XZ)':
+            forced = 'G18'
+        elif sel.startswith('G19') or sel == 'G19 (YZ)':
+            forced = 'G19'
+        _LAST_PLANE_SELECTION = sel
+        draw_2d(paths, forced)
+        draw_3d(paths)
+    plane_var.trace_add('write', on_plane_change)
+
+    def on_filter_change():
         sel = plane_var.get()
         forced = None
         if sel.startswith('G17') or sel == 'G17 (XY)':
@@ -228,7 +386,7 @@ def show_preview(editor, root):
         elif sel.startswith('G19') or sel == 'G19 (YZ)':
             forced = 'G19'
         draw_2d(paths, forced)
-    plane_var.trace_add('write', on_plane_change)
+        draw_3d(paths)
 
     # 3D çizim ve sınırlar
     # 3D eksen limitleri için kapsamı hesapla
