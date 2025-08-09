@@ -75,34 +75,36 @@ class GCodeEditor(tk.Text):
         # Varsayılan font ayarı
         if 'font' not in kwargs:
             kwargs['font'] = ('Courier', 14)
-            
+
         # Text widget'ı oluştur
         super().__init__(master, **kwargs)
-        
+
         # Scrollbar ve line numbers
         self.scrollbar = ttk.Scrollbar(master, orient='vertical', command=self.yview)
         self.configure(yscrollcommand=self.scrollbar.set)
         self.line_numbers = LineNumbers(master, self, bg='#f0f0f0')
-        
+
         # Widget'ları yerleştir
         self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
         self.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
+
         # Diğer başlangıç ayarları
         self.suggestions_window = None
         self._suggestion_listbox = None
         self.tooltip = None
 
-        # G-code tanımlarını JSON dosyasından yükle
-        # G-code tanımlarını global cache ile yükle
+        # G-code tanımlarını JSON dosyasından yükle (global cache)
         if not hasattr(GCodeEditor, '_gcode_keywords_cache'):
             GCodeEditor._gcode_keywords_cache = self.load_gcode_definitions()
         self.keywords = GCodeEditor._gcode_keywords_cache
-        
+
         # Text tag'leri oluştur
         self.tag_configure("gcode_letter", foreground="blue", font=(kwargs['font'][0], kwargs['font'][1], "bold"))
-        
+        # Diagnostik etiketleri (hata/uyarı satır vurguları)
+        self.tag_configure("error_line", background="#ffefef")
+        self.tag_configure("warning_line", background="#fff9db")
+
         # Event bindings
         self.bind('<KeyPress>', self.handle_keypress)
         self.bind('<KeyRelease>', self.show_suggestions)
@@ -112,6 +114,9 @@ class GCodeEditor(tk.Text):
         self.bind('<Control-c>', self.copy)
         self.bind('<Control-v>', self.paste)
         self.bind('<Motion>', self.show_tooltip)
+        # Enter/Tab özel davranışları
+        self.bind('<Return>', self.handle_return)
+        self.bind('<Tab>', self.handle_tab)
 
         # G-code harfleri listesi
         self.gcode_letters = {'g', 'x', 'y', 'z', 'm', 'i', 'j', 'k', 'f', 'r', 's', 't', 'n'}
@@ -191,7 +196,8 @@ class GCodeEditor(tk.Text):
         self.suggestions_window = tk.Toplevel()
         self.suggestions_window.wm_overrideredirect(True)
         try:
-            self.suggestions_window.transient(self.master)
+            # Kök pencereye transient bağla (lint/typecheck uyumu için toplevel kullan)
+            self.suggestions_window.transient(self.winfo_toplevel())
         except Exception:
             pass
 
@@ -241,15 +247,7 @@ class GCodeEditor(tk.Text):
             listbox.see(new_index)
         return "break"
 
-    def handle_return(self, event=None):
-        """
-        Enter tuşuna basıldığında öneri uygular veya normal davranışı sürdürür.
-        :param event: Klavye olayı (isteğe bağlı)
-        """
-        if self.suggestions_window:
-            self.apply_selected_suggestion(event)
-            return "break"
-        return None  # Normal Enter davranışına devam et
+    
 
     def handle_tab(self, event=None):
         """
@@ -471,6 +469,40 @@ class GCodeEditor(tk.Text):
             return "break"
         self.highlight_current_line()
         return None
+
+    def clear_diagnostics(self):
+        """Tüm hata/uyarı vurgularını temizler."""
+        self.tag_remove("error_line", "1.0", tk.END)
+        self.tag_remove("warning_line", "1.0", tk.END)
+
+    def annotate_parse_result(self, result):
+        """
+        parse_gcode çıktısına göre satırları hata/uyarı olarak vurgular.
+        :param result: dict, {'paths': [...], 'layers': [...]}
+        :return: dict, {'errors': int, 'warnings': int}
+        """
+        self.clear_diagnostics()
+        errors = 0
+        warnings = 0
+        if not isinstance(result, dict):
+            return {'errors': 0, 'warnings': 0}
+        paths = result.get('paths') or []
+        for p in paths:
+            ptype = p.get('type')
+            line_no = p.get('line_no')
+            if not line_no or not isinstance(line_no, int):
+                continue
+            start = f"{line_no}.0"
+            end = f"{line_no}.end"
+            if ptype in ('parse_error',):
+                self.tag_add("error_line", start, end)
+                errors += 1
+            elif ptype in ('unsupported', 'unknown_param'):
+                self.tag_add("warning_line", start, end)
+                warnings += 1
+        # Son durum hafızada tutulsun (isteğe bağlı)
+        self.last_diagnostics = {'errors': errors, 'warnings': warnings}
+        return self.last_diagnostics
 
     def highlight_current_line(self):
         """

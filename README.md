@@ -5,10 +5,13 @@ Python ile yazılmış Tkinter tabanlı bir G-code düzenleyici ve 2D/3D takım 
 ## Özellikler
 
 - Gelişmiş G-code editörü (otomatik tamamlama, tooltip, satır numarası)
-- Sağlam G-code parser (modal komut takibi, güvenli parametre işleme)
+- Sağlam G-code parser (modal komut takibi, güvenli parametre işleme, düzlem farkındalığı)
 - 2D Canvas üzerinde gridli çizim, 3D Matplotlib görselleştirme
+- 2D düzlem seçici (Auto/G17/G18/G19) ile XY/XZ/YZ projeksiyonu
+- Editörde sözdizimi hatası/uyarı satır vurgulama (parse diagnostikleri)
 - Dosya aç/kaydet/yeni, sözdizimi kontrolü, önizleme butonları
-- G17/G18/G19, G20/G21, G90/G91, G94, G28, G54–G59, G0/G1/G2/G3, M3/M4/M5/M6, M30 vb. komutları tanır
+- G17/G18/G19, G20/G21, G90/G91, G94, G28, G54–G59, G0/G1/G2/G3, M3/M4/M5/M6, M30
+	ve ek M-kodlar (M0/M1/M2/M7/M8/M9) vb. komutları tanır
 
 ## Mimari
 
@@ -16,7 +19,9 @@ Python ile yazılmış Tkinter tabanlı bir G-code düzenleyici ve 2D/3D takım 
 - `app/gui.py`: Menü çubuğu ve kısayol eylemleri.
 - `app/editor.py`: Tkinter Text üzerine kurulu G-code odaklı editör.
 - `app/gcode_parser.py`: Modal durum ve güvenli parametre işleme içeren G-code ayrıştırıcı; `{paths, layers}` döndürür.
-- `app/preview.py`: Parser çıktısını kullanarak 2D/3D çizim yapar.
+	Yol elemanları `line_no` ve `raw` içerir; G2/G3 yayları düzleme göre (G17/G18/G19) I/J/K ile işler.
+- `app/preview.py`: Parser çıktısını kullanarak 2D/3D çizim yapar. 2D için grid + merkezleme + ölçekleme,
+  2D düzlem seçici (Auto/G17/G18/G19) ve güvenli sayısal kontroller vardır.
 - `app/data/gcode_definitions.json`: Komut açıklamaları (otomatik tamamlama ve tooltip için).
 
 ## Kurulum
@@ -39,7 +44,7 @@ pip install -r requirements.txt
 Gerekirse doğrudan yükleme:
 
 ```bash
-pip install matplotlib
+pip install matplotlib numpy
 ```
 
 ## Çalıştırma
@@ -52,8 +57,10 @@ python app/main.py
 
 - File > Open ile `.nc`/G-code dosyanızı açın.
 - Editörde yazarken otomatik öneriler ve tooltip’ler görünür.
+- Önerilerde Enter/Tab ile seçimi uygulayabilirsiniz.
 - "Check Syntax" butonu sözdizimini doğrular.
-- "Preview" butonu iki ayrı pencerede 2D ve 3D önizleme açar.
+- "Preview" butonu iki ayrı pencerede 2D ve 3D önizleme açar. 2D penceresindeki "2D Düzlem"
+	menüsünden XY/XZ/YZ projeksiyonunu değiştirebilirsiniz.
 - File > Save veya "Save As..." ile çıktınızı kaydedin.
 
 ## Screenshots

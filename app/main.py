@@ -15,6 +15,9 @@ def check_syntax():
     """
     """G-code sözdizimi kontrolü yapar"""
     global editor
+    if editor is None:
+        messagebox.showerror("Hata", "Editör başlatılamadı.")
+        return
     content = editor.get("1.0", tk.END).strip()
     if not content:
         messagebox.showwarning("Uyarı", "Editör boş!")
@@ -22,9 +25,18 @@ def check_syntax():
     
     try:
         # parse_gcode fonksiyonunu kullanarak sözdizimi kontrolü
-        paths = parse_gcode(content)
-        # Hata yoksa başarılı mesajı göster
-        messagebox.showinfo("Başarılı", "G-code sözdizimi kontrolü başarılı!")
+        result = parse_gcode(content)
+        # Editörde satırları işaretle
+        diag = editor.annotate_parse_result(result) if (editor is not None and hasattr(editor, 'annotate_parse_result')) else {'errors': 0, 'warnings': 0}
+        errors = diag.get('errors', 0)
+        warnings = diag.get('warnings', 0)
+        if errors == 0:
+            if warnings:
+                messagebox.showinfo("Sözdizimi", f"Hata yok, {warnings} uyarı bulundu.")
+            else:
+                messagebox.showinfo("Sözdizimi", "Hata ve uyarı yok.")
+        else:
+            messagebox.showwarning("Sözdizimi", f"{errors} hata, {warnings} uyarı bulundu. Hatalı satırlar kırmızımsı, uyarılar sarımsı renkte vurgulandı.")
     except Exception as e:
         messagebox.showerror("Hata", f"Sözdizimi hatası:\n{str(e)}")
 
@@ -34,6 +46,9 @@ def save_file():
     """
     """Dosyayı kaydeder"""
     global current_file, editor
+    if editor is None:
+        messagebox.showerror("Hata", "Editör başlatılamadı.")
+        return
     if current_file:
         content = editor.get("1.0", tk.END)
         try:
@@ -66,6 +81,9 @@ def load_file():
     """
     """Dosya yükler"""
     global current_file, editor
+    if editor is None:
+        messagebox.showerror("Hata", "Editör başlatılamadı.")
+        return
     file_path = filedialog.askopenfilename(
         filetypes=[("NC files", "*.nc"), ("All files", "*.*")],
         title="G-code Dosyası Aç"
@@ -87,6 +105,9 @@ def new_file():
     """
     """Yeni dosya oluşturur"""
     global current_file, editor
+    if editor is None:
+        messagebox.showerror("Hata", "Editör başlatılamadı.")
+        return
     if editor.get("1.0", tk.END).strip():
         if messagebox.askyesno("Kaydet", "Mevcut değişiklikler kaydedilsin mi?"):
             save_file()
