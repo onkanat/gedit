@@ -82,21 +82,22 @@ Bir CNC operatörü/mühendisi olarak, ISO 6983-1 (RS-274) söz dizimine uygun b
 - **FR-001**: Sistem, ISO 6983-1 kapsamında belirtilen G/M komutlarının bir alt kümesini tanımalı (G0/1/2/3/4/17/18/19/20/21/28/54–59/90/91/94; M0/1/2/3/4/5/6/7/8/9/30) ve diğerlerini "unsupported" olarak raporlamalıdır.
 - **FR-002**: Parser çıktısı `{paths, layers}` sözleşmesini korumalı; her yol için mümkün olduğunca `line_no` ve ham `line` bilgisini içermelidir.
 - **FR-003**: Yay (G2/G3) doğrulamasında R>0 varsa R kullanılmalı; yoksa düzleme uygun I/J/K değerleri sayısal olmalıdır; aksi durumda `parse_error` üretilmelidir.
+- **FR-003**: Yay (G2/G3) doğrulamasında R>0 varsa R kullanılacaktır (öncelikli); R yoksa düzleme uygun I/J/K değerleri sayısal olmalıdır; aksi durumda `parse_error` üretilir. R ve IJK birlikte verilirse R öncelikli kabul edilir ve I/J/K değerleri yok sayılır.
 - **FR-004**: Modal durumlar (motion, plane, units, feed_mode, coord_system, spindle) izlenmeli; önizleme yalnızca geçerli ve sayısal olarak güvenli yolları çizmeli.
 - **FR-005**: 2D önizleme Auto/G17/G18/G19 seçicisi, grid ve eksenleri göstermeli; Rapid/Feed/Arc görünürlük anahtarları ve legend bulunmalıdır.
 - **FR-006**: 3D önizleme eşit eksen limitlerine sahip olmalı ve geçerli yol yoksa güvenli varsayılan aralık gösterebilmelidir.
 - **FR-007**: Editör otomatik tamamlama; alt string ve büyük/küçük harf duyarsız eşleşme ile öneriler sunmalı; Enter/Tab ile seçim uygulanmalıdır.
 - **FR-008**: Tooltip, sözlükteki komut açıklamalarını kullanıcıya okunur biçimde göstermelidir.
 - **FR-009**: Problems paneli satır numarası, tür ve mesajı listelemeli; satıra çift tıklama ilgili satırı seçmeli.
-- **FR-010**: Uzun işlemler UI’ı kilitlemeyecek şekilde yönetilmeli; gerekirse gecikmeli çalıştırma/işlem işaretçileri kullanılmalıdır. [NEEDS CLARIFICATION: Hedef maksimum UI blok süresi]
+- **FR-010**: Uzun işlemler UI’ı kilitlemeyecek şekilde yönetilmelidir. 10 MB’a kadar dosyalarda UI blok olmamalı; olay döngüsünde tek seferde blok süresi en fazla 100 ms olmalı ve kullanıcı etkileşimi (kaydırma/yazma) kesintisiz kalmalıdır.
 - **FR-011**: Hata/uyarı mesajları kullanıcıya anlaşılır, eyleme dönük metinle verilmelidir (ör. hangi parametre eksik/sayısal değil).
 - **FR-012**: Ölçü birimleri (G20/G21) modal olarak uygulanmalı; dönüşümler tutarlı ve izlenebilir olmalıdır.
 
 
 Belirsiz/Netleştirilmesi gerekenler:
-- **FR-013**: ISO 6983-1’in hangi alt kümesi MVP kapsamındadır? [NEEDS CLARIFICATION]
-- **FR-014**: Performans hedefleri (dosya boyutu, tepki süresi). [NEEDS CLARIFICATION]
+
 - **FR-015**: Dairesel olmayan interpolasyonlar (splines) veya çok eksenli düzlemler kapsam dışı mı? [NEEDS CLARIFICATION]
+
 
 ### Key Entities *(include if feature involves data)*
 
@@ -111,13 +112,16 @@ Belirsiz/Netleştirilmesi gerekenler:
 
 GATE: Automated checks run during main() execution
 
+ 
 ### Content Quality
+
 - [ ] No implementation details (languages, frameworks, APIs)
 - [ ] Focused on user value and business needs
 - [ ] Written for non-technical stakeholders
 - [ ] All mandatory sections completed
 
 ### Requirement Completeness
+
 - [ ] No [NEEDS CLARIFICATION] markers remain
 - [ ] Requirements are testable and unambiguous  
 - [ ] Success criteria are measurable
