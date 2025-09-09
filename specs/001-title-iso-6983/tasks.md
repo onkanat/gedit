@@ -20,42 +20,50 @@ Docs source:
 
 #### Setup
 
-- [ ] T001 Ensure test environment ready [P]
+- [x] T001 Ensure test environment ready [P]
   - Cmd: create/verify venv, install pytest
   - Verify: `python -m pytest -q tests/test_gcode_parser.py` çalışır
+  - Evidence: venv + pytest kurulu, tüm testler koşuyor (7 passed).
 
 #### Contract tests [P]
 
-- [ ] T010 Parser contract: happy path tests [P]
+- [x] T010 Parser contract: happy path tests [P]
   - File: tests/test_gcode_parser.py (genişlet)
   - Assert: output has paths/layers; entries include line_no/line; arcs obey R>0 precedence
-- [ ] T011 Parser contract: diagnostics tests [P]
+  - Evidence: R>0 önceliği ve plane-aware arc testleri eklendi ve geçti.
+- [x] T011 Parser contract: diagnostics tests [P]
   - File: tests/test_gcode_parser.py
   - Cases: unsupported, unknown_param, parse_error; preview-safe (no draw)
+  - Evidence: unsupported/unknown/parse_error senaryoları testlerde mevcut ve PASS.
 
 #### Core (Parser)
 
-- [ ] T020 Enforce contract fields and types
+- [x] T020 Enforce contract fields and types
   - File: app/gcode_parser.py
   - Ensure all path entries include required keys; guard `.get()` usage
-- [ ] T021 Arc validation edge cases
+  - Evidence: arc objelerine `cw` eklendi; güvenli `.get()`/guards mevcut.
+- [x] T021 Arc validation edge cases
   - File: app/gcode_parser.py
   - Cases: R present but <=0; missing IJK on non-R; plane-mismatch IJK
+  - Evidence: İlgili testler eklendi, parse_error mesajları hizalı ve PASS.
 
 #### Integration (Preview)
 
-- [ ] T030 Visibility filters honor diagnostics
+- [x] T030 Visibility filters honor diagnostics
   - File: app/preview.py
   - Ensure diagnostic types are never drawn; legend unaffected
+  - Evidence: preview çizim döngüsü diagnostikleri açıkça atlıyor.
 
 #### Polish [P]
 
-- [ ] T040 Quickstart update [P]
+- [x] T040 Quickstart update [P]
   - File: specs/001-title-iso-6983/quickstart.md
   - Add a minimal sample flow referencing example .nc
-- [ ] T041 README supported codes table [P]
+  - Evidence: Quickstart’a önizleme adımı eklendi; lint hatası giderildi.
+- [x] T041 README supported codes table [P]
   - File: README.md
   - Clarify supported G/M-codes subset and R/IJK precedence rule
+  - Evidence: README’de G/M tabloları ve R önceliği notu var.
 
 ### Dependencies (current)
 
