@@ -61,6 +61,11 @@ python app/main.py
 - "Preview" butonu iki ayrı pencerede 2D ve 3D önizleme açar. 2D penceresindeki "2D Düzlem" menüsünden XY/XZ/YZ projeksiyonunu değiştirebilirsiniz. Rapid/Feed/Arc filtre kutularıyla çizim türlerinin görünürlüğünü açıp kapatabilir, legend üzerinden renk/çizgi tiplerini görebilirsiniz. Son seçtiğiniz düzlem, uygulama açık kaldığı sürece hatırlanır.
 - File > Save veya "Save As..." ile çıktınızı kaydedin.
 
+### Kısayollar (Undo/Redo)
+
+- macOS: Cmd+Z (Undo), Shift+Cmd+Z (Redo)
+- Windows/Linux: Ctrl+Z (Undo), Ctrl+Y veya Ctrl+Shift+Z (Redo)
+
 ### Notlar
 
 - Yaylar (G2/G3): R>0 verildiğinde I/J/K değerleri yerine R kullanılır (öncelik R’de). R yoksa düzleme (G17/G18/G19) uygun IJK kombinasyonu ile yarıçap türetilir.

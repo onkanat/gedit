@@ -3,6 +3,7 @@ from tkinter import ttk
 import re
 import json
 import os
+import time
 
 class LineNumbers(tk.Canvas):
     """
@@ -117,6 +118,28 @@ class GCodeEditor(tk.Text):
         # Enter/Tab özel davranışları
         self.bind('<Return>', self.handle_return)
         self.bind('<Tab>', self.handle_tab)
+        # Yapıştırma ve odak değişimi
+        self.bind('<<Paste>>', self._on_paste)
+        self.bind('<FocusOut>', self._on_focus_out)
+
+        # Undo/Redo ve gruplama durumu
+        self.undo_enabled = True
+        self.max_undo = 1000
+        self.group_threshold_ms = 800
+        self._last_edit_ts = 0.0
+        self._idle_sep_after_id = None
+        try:
+            self.configure(undo=True)
+            self.configure(maxundo=self.max_undo)
+        except Exception:
+            pass
+
+        # Kısayollar (platformlar arası)
+        self.bind('<Control-z>', self._on_undo)
+        self.bind('<Control-y>', self._on_redo)
+        self.bind('<Control-Shift-Z>', self._on_redo)
+        self.bind('<Command-z>', self._on_undo)
+        self.bind('<Shift-Command-Z>', self._on_redo)
 
         # G-code harfleri listesi
         self.gcode_letters = {'g', 'x', 'y', 'z', 'm', 'i', 'j', 'k', 'f', 'r', 's', 't', 'n'}
@@ -426,6 +449,95 @@ class GCodeEditor(tk.Text):
         self.event_generate("<<Paste>>")
         return "break"
 
+    # === Undo/Redo API ===
+    def enable_undo(self, max_undo: int = 1000):
+        """Yerleşik undo'yu etkinleştirir ve maxundo ayarlar."""
+        self.undo_enabled = True
+        self.max_undo = max_undo
+        try:
+            self.configure(undo=True)
+            self.configure(maxundo=self.max_undo)
+        except Exception:
+            pass
+
+    def disable_undo(self):
+        """Undo'yu devre dışı bırakır."""
+        self.undo_enabled = False
+        try:
+            self.configure(undo=False)
+        except Exception:
+            pass
+
+    def undo(self) -> bool:
+        """Bir adım geri alır; başarılıysa True döner."""
+        try:
+            self.edit_undo()
+            return True
+        except Exception:
+            return False
+
+    def redo(self) -> bool:
+        """Bir adım ileri alır; başarılıysa True döner."""
+        try:
+            self.edit_redo()
+            return True
+        except Exception:
+            return False
+
+    def add_undo_separator(self):
+        """Undo yığınına ayırıcı ekler (gruplama)."""
+        try:
+            self.edit_separator()
+        except Exception:
+            pass
+
+    def clear_history(self):
+        """Undo/redo geçmişini temizler."""
+        try:
+            self.edit_reset()
+        except Exception:
+            pass
+
+    # === Internal helpers ===
+    def _on_undo(self, event=None):
+        self.undo()
+        return "break"
+
+    def _on_redo(self, event=None):
+        self.redo()
+        return "break"
+
+    def _on_paste(self, event=None):
+        # Yapıştırmadan sonra bir ayırıcı ekle
+        self.add_undo_separator()
+        self._mark_edited()
+
+    def _on_focus_out(self, event=None):
+        # Odak kaybında ayırıcı ekle
+        self.add_undo_separator()
+
+    def _mark_edited(self):
+        self._last_edit_ts = time.time()
+        self._tick_edit_timer()
+
+    def _tick_edit_timer(self):
+        # Var olan zamanlayıcıyı iptal et
+        if getattr(self, '_idle_sep_after_id', None) is not None:
+            try:
+                if self._idle_sep_after_id is not None:
+                    self.after_cancel(self._idle_sep_after_id)
+            except Exception:
+                pass
+            self._idle_sep_after_id = None
+        # Yeniden planla
+        def _maybe_sep():
+            if self._last_edit_ts and (time.time() - self._last_edit_ts) * 1000.0 >= self.group_threshold_ms:
+                self.add_undo_separator()
+                self._idle_sep_after_id = None
+            else:
+                self._idle_sep_after_id = self.after(50, _maybe_sep)
+        self._idle_sep_after_id = self.after(50, _maybe_sep)
+
     def handle_keypress(self, event):
         """
         Tuş basımlarını yönetir, G-code harflerini işler.
@@ -445,6 +557,8 @@ class GCodeEditor(tk.Text):
                 return self.apply_selected_suggestion(event)
             elif event.keysym == 'Escape':
                 return self.close_suggestions()
+        # Düzenleme zaman damgasını güncelle
+        self._mark_edited()
         return None
 
     def insert(self, index, chars, *args):
@@ -453,21 +567,27 @@ class GCodeEditor(tk.Text):
         :param index: Ekleme konumu
         :param chars: Eklenecek karakterler
         """
-        # G-code harflerini kontrol et ve büyük harfe çevir
-        new_chars = ''
-        for char in chars:
-            if char.lower() in self.gcode_letters:
-                new_chars += char.upper()
-                # Insert pozisyonunu hesapla
-                pos = self.index(index)
-                # Karakteri ekle ve etiketle
-                super().insert(index, char.upper(), *args)
-                self.tag_add("gcode_letter", pos, f"{pos}+1c")
-                index = f"{pos}+1c"
-            else:
-                new_chars += char
-                super().insert(index, char, *args)
-                index = f"{self.index(index)}+1c"
+        # Uzun metin eklemelerinde (>=2 karakter) ayrı bir undo bloğu başlat
+        try:
+            if isinstance(chars, str) and len(chars) > 1:
+                self.edit_separator()
+        except Exception:
+            pass
+
+        # G-code harflerini kontrol et ve büyük harfe çevirerek tek seferde ekle
+        transformed = ''.join((c.upper() if c.lower() in self.gcode_letters else c) for c in chars)
+        start_index = self.index(index)
+        super().insert(index, transformed, *args)
+
+        # Eklenen bölümde G-code harflerini etiketle
+        for offset, ch in enumerate(transformed):
+            if ch.lower() in self.gcode_letters:
+                start = f"{start_index}+{offset}c"
+                end = f"{start_index}+{offset+1}c"
+                self.tag_add("gcode_letter", start, end)
+
+        # Programatik eklemeden sonra düzenleme zamanını güncelle
+        self._mark_edited()
 
     def handle_keyrelease(self, event=None):
         """
@@ -494,6 +614,8 @@ class GCodeEditor(tk.Text):
         if self.suggestions_window:
             self.apply_selected_suggestion(event)
             return "break"
+        # Enter basımı bir gruplama sınırı olsun
+        self.add_undo_separator()
         self.highlight_current_line()
         return None
 
