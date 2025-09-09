@@ -61,6 +61,45 @@ python app/main.py
 - "Preview" butonu iki ayrı pencerede 2D ve 3D önizleme açar. 2D penceresindeki "2D Düzlem" menüsünden XY/XZ/YZ projeksiyonunu değiştirebilirsiniz. Rapid/Feed/Arc filtre kutularıyla çizim türlerinin görünürlüğünü açıp kapatabilir, legend üzerinden renk/çizgi tiplerini görebilirsiniz. Son seçtiğiniz düzlem, uygulama açık kaldığı sürece hatırlanır.
 - File > Save veya "Save As..." ile çıktınızı kaydedin.
 
+### Notlar
+
+- Yaylar (G2/G3): R>0 verildiğinde I/J/K değerleri yerine R kullanılır (öncelik R’de). R yoksa düzleme (G17/G18/G19) uygun IJK kombinasyonu ile yarıçap türetilir.
+
+### Desteklenen Komutlar (özet)
+
+G-kodları:
+
+| Kod      | Açıklama                         | Not |
+|----------|----------------------------------|-----|
+| G0       | Hızlı hareket (rapid)            |     |
+| G1       | Doğrusal ilerleme (feed)         | F ile besleme hızı |
+| G2       | Yay (CW)                         | R>0 öncelikli; yoksa düzleme uygun IJK |
+| G3       | Yay (CCW)                        | R>0 öncelikli; yoksa düzleme uygun IJK |
+| G4       | Bekleme (dwell)                  | P süresi |
+| G17      | Düzlem: XY                       |     |
+| G18      | Düzlem: XZ                       |     |
+| G19      | Düzlem: YZ                       |     |
+| G20      | Birimler: inç                    |     |
+| G21      | Birimler: milimetre              |     |
+| G28      | Referansa dönüş (home)           |     |
+| G54–G59  | İş koordinat sistemi seçimi      |     |
+| G90      | Mutlak konumlama                 |     |
+| G91      | Bağıl (artımsal) konumlama       |     |
+| G94      | Besleme modu: mm/dk (G94)        |     |
+
+M-kodları:
+
+| Kod          | Açıklama                  |
+|--------------|---------------------------|
+| M0, M1       | Duraklatma                |
+| M2           | Program sonu              |
+| M3           | İğne saat yönü            |
+| M4           | İğne saat tersi           |
+| M5           | İğne dur                  |
+| M6           | Takım değişimi            |
+| M7, M8, M9   | Soğutma açık/kapalı       |
+| M30          | Program sonu (rewind)     |
+
 ## Screenshots
 
 Aşağıdaki görselleri `docs/screenshots` klasörüne yerleştirin (ör. PNG/GIF). Dosya adları örnektir; dilediğiniz gibi adlandırabilirsiniz.

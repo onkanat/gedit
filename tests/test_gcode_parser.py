@@ -55,6 +55,49 @@ class TestGCodeParser(unittest.TestCase):
         self.assertTrue(any(p.get('type') == 'unsupported' and 'M100' in (p.get('code') or '') for p in paths))
         self.assertTrue(any(p.get('type') == 'unknown_param' and p.get('param') == 'Q5' for p in paths))
 
+    def test_arc_r_precedence_over_ijk(self):
+        code = """
+        G17 G21 G90
+        G0 X0 Y0
+        G2 X10 Y0 R5 I100 J100 ; R>0 varsa I/J yoksayılmalı
+        """.strip()
+        res = parse_gcode(code)
+        arcs = [p for p in (res.get('paths') or []) if p.get('type') == 'arc']
+        self.assertEqual(len(arcs), 1)
+        
+
+    def test_arc_plane_g18_ik(self):
+        code = """
+        G18 G21 G90
+        G0 X0 Z0
+        G3 X10 Z0 I0 K5
+        """.strip()
+        res = parse_gcode(code)
+        arcs = [p for p in (res.get('paths') or []) if p.get('type') == 'arc']
+        self.assertEqual(len(arcs), 1)
+        
+
+    def test_arc_r_non_positive_error(self):
+        code = """
+        G17 G21 G90
+        G0 X0 Y0
+        G2 X10 Y0 R0
+        """.strip()
+        res = parse_gcode(code)
+        errs = [p for p in (res.get('paths') or []) if p.get('type') == 'parse_error']
+        self.assertTrue(any('Arc (G2/G3) requires' in (e.get('message') or '') for e in errs))
+
+    def test_arc_plane_mismatch_ijk(self):
+        # G18 (XZ) düzleminde yalnız J verilirse merkez belirsiz olmalı -> hata
+        code = """
+        G18 G21 G90
+        G0 X0 Z0
+        G2 X10 Z0 J5
+        """.strip()
+        res = parse_gcode(code)
+        errs = [p for p in (res.get('paths') or []) if p.get('type') == 'parse_error']
+        self.assertTrue(any('Arc (G2/G3) requires' in (e.get('message') or '') for e in errs))
+
 
 if __name__ == '__main__':
     unittest.main()
