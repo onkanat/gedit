@@ -1,3 +1,14 @@
+# Diagnostic message templates for consistency/localization
+MESSAGES = {
+    'unsupported_g': "Unsupported G-code {code}",
+    'unsupported_m': "Unsupported M-code {code}",
+    'unknown_param': "Unknown parameter letter '{letter}' in '{word}'",
+    'invalid_numeric': "Invalid numeric value for '{letter}': '{bad}'",
+    'invalid_word': "Invalid word format: '{word}'",
+    'invalid_layer_comment': 'Invalid layer comment format',
+    'arc_requirements': 'Arc (G2/G3) requires R>0 or appropriate I/J/K values (per plane).',
+}
+
 def parse_gcode(code):
     """
     G-code metnini ayrıştırır ve yolları/layer bilgilerini döndürür.
@@ -49,7 +60,7 @@ def parse_gcode(code):
                 current_layer = int(original_line.split(':', 1)[1])
                 layers.append({'layer': current_layer, 'paths': []})
             except Exception:
-                add_diag('parse_error', 'Invalid layer comment format', line_no, original_line)
+                add_diag('parse_error', MESSAGES['invalid_layer_comment'], line_no, original_line)
             continue
 
         # Remove ; comments part
@@ -110,7 +121,7 @@ def parse_gcode(code):
                     elif 54 <= gnum <= 59:
                         current_modal['coord_system'] = f'G{gnum}'
                     else:
-                        add_diag('unsupported', f'Unsupported G-code G{gnum}', line_no, original_line, code=f'G{gnum}')
+                        add_diag('unsupported', MESSAGES['unsupported_g'].format(code=f'G{gnum}'), line_no, original_line, code=f'G{gnum}')
                 elif letter == 'M':
                     mnum = int(value)
                     if mnum in (3, 4, 5, 6):
@@ -125,7 +136,7 @@ def parse_gcode(code):
                     elif mnum in (7, 8, 9):
                         paths.append({'type': 'coolant', 'code': f'M{mnum}', 'line': original_line, 'line_no': line_no})
                     else:
-                        add_diag('unsupported', f'Unsupported M-code M{mnum}', line_no, original_line, code=f'M{mnum}')
+                        add_diag('unsupported', MESSAGES['unsupported_m'].format(code=f'M{mnum}'), line_no, original_line, code=f'M{mnum}')
                 elif letter in ('X', 'Y', 'Z', 'I', 'J', 'K', 'R'):
                     params[letter] = value * unit_scale
                     if letter in ('X', 'Y', 'Z'):
@@ -133,13 +144,13 @@ def parse_gcode(code):
                 elif letter in ('F', 'S', 'P', 'E', 'D', 'H', 'L', 'T'):
                     params[letter] = value
                 else:
-                    add_diag('unknown_param', f"Unknown parameter letter '{letter}' in '{word}'", line_no, original_line, param=word)
+                    add_diag('unknown_param', MESSAGES['unknown_param'].format(letter=letter, word=word), line_no, original_line, param=word)
             except ValueError:
                 bad = word[1:] if len(word) > 1 else ''
-                add_diag('parse_error', f"Invalid numeric value for '{letter}': '{bad}'", line_no, original_line, word=word, param=letter)
+                add_diag('parse_error', MESSAGES['invalid_numeric'].format(letter=letter, bad=bad), line_no, original_line, word=word, param=letter)
                 continue
             except IndexError:
-                add_diag('parse_error', f"Invalid word format: '{word}'", line_no, original_line, word=word)
+                add_diag('parse_error', MESSAGES['invalid_word'].format(word=word), line_no, original_line, word=word)
                 continue
 
         if not motion_command:
@@ -206,7 +217,7 @@ def parse_gcode(code):
                     if layers:
                         layers[-1]['paths'].append(path_obj)
                 else:
-                    add_diag('parse_error', 'Arc (G2/G3) requires R>0 or appropriate I/J/K values (per plane).', line_no, original_line, motion=motion_command)
+                    add_diag('parse_error', MESSAGES['arc_requirements'], line_no, original_line, motion=motion_command)
 
             update_position(new_x, new_y, new_z)
 

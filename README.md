@@ -67,8 +67,38 @@ python app/main.py
 
 ### Desteklenen Komutlar (özet)
 
-- G: G0, G1, G2, G3, G4, G17, G18, G19, G20, G21, G28, G54–G59, G90, G91, G94
-- M: M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M30
+G-kodları:
+
+| Kod      | Açıklama                         | Not |
+|----------|----------------------------------|-----|
+| G0       | Hızlı hareket (rapid)            |     |
+| G1       | Doğrusal ilerleme (feed)         | F ile besleme hızı |
+| G2       | Yay (CW)                         | R>0 öncelikli; yoksa düzleme uygun IJK |
+| G3       | Yay (CCW)                        | R>0 öncelikli; yoksa düzleme uygun IJK |
+| G4       | Bekleme (dwell)                  | P süresi |
+| G17      | Düzlem: XY                       |     |
+| G18      | Düzlem: XZ                       |     |
+| G19      | Düzlem: YZ                       |     |
+| G20      | Birimler: inç                    |     |
+| G21      | Birimler: milimetre              |     |
+| G28      | Referansa dönüş (home)           |     |
+| G54–G59  | İş koordinat sistemi seçimi      |     |
+| G90      | Mutlak konumlama                 |     |
+| G91      | Bağıl (artımsal) konumlama       |     |
+| G94      | Besleme modu: mm/dk (G94)        |     |
+
+M-kodları:
+
+| Kod          | Açıklama                  |
+|--------------|---------------------------|
+| M0, M1       | Duraklatma                |
+| M2           | Program sonu              |
+| M3           | İğne saat yönü            |
+| M4           | İğne saat tersi           |
+| M5           | İğne dur                  |
+| M6           | Takım değişimi            |
+| M7, M8, M9   | Soğutma açık/kapalı       |
+| M30          | Program sonu (rewind)     |
 
 ## Screenshots
 
