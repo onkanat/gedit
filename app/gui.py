@@ -24,11 +24,21 @@ def create_main_window(root, new_file_command, load_file_command, save_file_comm
     
     # Edit menüsü
     edit_menu = tk.Menu(menu_bar, tearoff=0)
-    edit_menu.add_command(label="Cut", command=lambda: root.focus_get().event_generate("<<Cut>>"), accelerator="Ctrl+X")
-    edit_menu.add_command(label="Copy", command=lambda: root.focus_get().event_generate("<<Copy>>"), accelerator="Ctrl+C")
-    edit_menu.add_command(label="Paste", command=lambda: root.focus_get().event_generate("<<Paste>>"), accelerator="Ctrl+V")
+    # Platforma göre accelerator metinleri
+    is_macos = root.tk.call('tk', 'windowingsystem') == 'aqua'
+    undo_acc = 'Cmd+Z' if is_macos else 'Ctrl+Z'
+    redo_acc = 'Shift+Cmd+Z' if is_macos else 'Ctrl+Y'
+
+    # Undo/Redo
+    edit_menu.add_command(label="Undo", command=lambda: root.focus_get().event_generate("<Command-z>" if is_macos else "<Control-z>"), accelerator=undo_acc)
+    edit_menu.add_command(label="Redo", command=lambda: root.focus_get().event_generate("<Shift-Command-Z>" if is_macos else "<Control-y>"), accelerator=redo_acc)
     edit_menu.add_separator()
-    edit_menu.add_command(label="Show Suggestions", command=lambda: root.focus_get().force_suggestions(), accelerator="Ctrl+Space")
+    # Clipboard işlemleri
+    edit_menu.add_command(label="Cut", command=lambda: root.focus_get().event_generate("<<Cut>>"), accelerator="Ctrl+X" if not is_macos else "Cmd+X")
+    edit_menu.add_command(label="Copy", command=lambda: root.focus_get().event_generate("<<Copy>>"), accelerator="Ctrl+C" if not is_macos else "Cmd+C")
+    edit_menu.add_command(label="Paste", command=lambda: root.focus_get().event_generate("<<Paste>>"), accelerator="Ctrl+V" if not is_macos else "Cmd+V")
+    edit_menu.add_separator()
+    edit_menu.add_command(label="Show Suggestions", command=lambda: getattr(root.focus_get(), 'force_suggestions', lambda: None)(), accelerator="Ctrl+Space")
     menu_bar.add_cascade(label="Edit", menu=edit_menu)
     
     return menu_bar
