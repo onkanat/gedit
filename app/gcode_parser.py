@@ -189,6 +189,7 @@ def parse_gcode(code):
                     path_obj = {
                         'type': 'arc',
                         'arc_type': arc_type,
+                        'cw': True if arc_type == 'clockwise' else False,
                         'start': (x, y, z),
                         'end': (new_x, new_y, new_z),
                         'center_relative': (crx, cry),

@@ -187,6 +187,9 @@ def show_preview(editor, root):
         last_scale["scale"], last_scale["x"], last_scale["y"] = float(scale), float(x_offset), float(y_offset)
         last_scale["initialized"] = True
         for path in paths:
+            # Diagnostikleri çizmeyin
+            if isinstance(path, dict) and path.get('type') in ('unsupported','unknown_param','parse_error'):
+                continue
             if not (isinstance(path, dict) and 'start' in path and 'end' in path and 'type' in path):
                 continue
             try:
@@ -275,6 +278,9 @@ def show_preview(editor, root):
         # Sınırları hesapla
         min_x, max_x, min_y, max_y, min_z, max_z = compute_bounds(paths, None)
         for path in paths:
+            # Diagnostikleri çizmeyin
+            if isinstance(path, dict) and path.get('type') in ('unsupported','unknown_param','parse_error'):
+                continue
             if not (isinstance(path, dict) and 'start' in path and 'end' in path and 'type' in path):
                 continue
             try:

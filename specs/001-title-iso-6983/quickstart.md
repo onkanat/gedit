@@ -11,6 +11,7 @@ Bu özellik setini denemek için kısa rehber.
 
 - Uygulama: `python -m app.main`
 - Dosya aç: Menüden örnek `.nc` dosyalarını (örn. EXAMPLE_POCKET.nc) yükle.
+- Önizleme: Preview butonuna basın, 2D için Auto düzlemde başlayın.
 
 ## İpuçları
 

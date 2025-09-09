@@ -61,6 +61,15 @@ python app/main.py
 - "Preview" butonu iki ayrı pencerede 2D ve 3D önizleme açar. 2D penceresindeki "2D Düzlem" menüsünden XY/XZ/YZ projeksiyonunu değiştirebilirsiniz. Rapid/Feed/Arc filtre kutularıyla çizim türlerinin görünürlüğünü açıp kapatabilir, legend üzerinden renk/çizgi tiplerini görebilirsiniz. Son seçtiğiniz düzlem, uygulama açık kaldığı sürece hatırlanır.
 - File > Save veya "Save As..." ile çıktınızı kaydedin.
 
+### Notlar
+
+- Yaylar (G2/G3): R>0 verildiğinde I/J/K değerleri yerine R kullanılır (öncelik R’de). R yoksa düzleme (G17/G18/G19) uygun IJK kombinasyonu ile yarıçap türetilir.
+
+### Desteklenen Komutlar (özet)
+
+- G: G0, G1, G2, G3, G4, G17, G18, G19, G20, G21, G28, G54–G59, G90, G91, G94
+- M: M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M30
+
 ## Screenshots
 
 Aşağıdaki görselleri `docs/screenshots` klasörüne yerleştirin (ör. PNG/GIF). Dosya adları örnektir; dilediğiniz gibi adlandırabilirsiniz.
