@@ -1,12 +1,20 @@
 # Core runtime dependencies for the G-code Editor/Preview app
-matplotlib==3.10.5
-numpy==2.3.2
-python-dateutil==2.9.0.post0
-pillow==11.3.0
-cycler==0.12.1
-kiwisolver==1.4.8
-contourpy==1.3.3
-packaging==25.0
-pyparsing==3.2.3
-fonttools==4.59.0
-six==1.17.0
+matplotlib>=3.9.0
+numpy>=1.24.0
+
+# Matplotlib dependencies
+python-dateutil>=2.7
+pillow>=8.0.0
+cycler>=0.10
+kiwisolver>=1.3.1
+contourpy>=1.0.1
+packaging>=20.0
+pyparsing>=2.3.1
+fonttools>=4.22.0
+
+# Python compatibility
+six>=1.15.0
+
+# Development and testing dependencies (optional)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0

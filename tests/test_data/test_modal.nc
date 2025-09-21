@@ -1,0 +1,7 @@
+; Modal state test file
+G17 G21 G90 G94
+G0 X10 Y10
+G1 X20 Y20
+G2 X30 Y10 I5 J0
+M30
+G0 X0 Y0

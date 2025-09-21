@@ -1,0 +1,202 @@
+{
+  "requirements.txt": {
+    "fingerprint": "ea15077d93d9f9bfbd5ae41862229556895d7df0",
+    "path": "/Users/hakankilicaslan/Git/gedit/requirements.txt"
+  },
+  "README.md": {
+    "fingerprint": "57d512dbab0494b9bff7ea72dbb65f7b7b688eba",
+    "path": "/Users/hakankilicaslan/Git/gedit/README.md"
+  },
+  "GEMINI.md": {
+    "fingerprint": "8a1ba4958e95c42a99bb55039af33f32bc7c8f62",
+    "path": "/Users/hakankilicaslan/Git/gedit/GEMINI.md"
+  },
+  "app/preview.py": {
+    "fingerprint": "bd29d3c0e82bc3fe7f438185d6261e3e0db4f747",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/preview.py"
+  },
+  "app/__init__.py": {
+    "fingerprint": "c62058fa02aa6e8243af64106a34b56d4591d9d3",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/__init__.py"
+  },
+  "app/gcode_parser.py": {
+    "fingerprint": "a2602dc4a012fc1a345ead56fdd7d5d614d4295b",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/gcode_parser.py"
+  },
+  "app/editor.py": {
+    "fingerprint": "0e3915c39164144ee26f434f350f837cce5cb315",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/editor.py"
+  },
+  "app/main.py": {
+    "fingerprint": "044f63c02c1a98996e844076f60d3b156b634191",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/main.py"
+  },
+  "app/gui.py": {
+    "fingerprint": "6745141eb44d9b891bad1aa70371a104d2d53a50",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/gui.py"
+  },
+  "memory/constitution.md": {
+    "fingerprint": "28afff4f723c04fe45bf4052681af1b5b64a5580",
+    "path": "/Users/hakankilicaslan/Git/gedit/memory/constitution.md"
+  },
+  "memory/constitution_update_checklist.md": {
+    "fingerprint": "4d137fbff706e50b148674d7a595784d2efa2d74",
+    "path": "/Users/hakankilicaslan/Git/gedit/memory/constitution_update_checklist.md"
+  },
+  "tests/utils_tk.py": {
+    "fingerprint": "40744e6b9ca8f8025f0a0e585418ccdfcb531b89",
+    "path": "/Users/hakankilicaslan/Git/gedit/tests/utils_tk.py"
+  },
+  "tests/test_gcode_parser.py": {
+    "fingerprint": "28669b08fb650812fe4ac85f21a91da741f4c94b",
+    "path": "/Users/hakankilicaslan/Git/gedit/tests/test_gcode_parser.py"
+  },
+  "scripts/common.sh": {
+    "fingerprint": "74003297613648c6cba939406820e7f8eebc2d18",
+    "path": "/Users/hakankilicaslan/Git/gedit/scripts/common.sh"
+  },
+  "scripts/setup-plan.sh": {
+    "fingerprint": "371d3737e3a636a5469c44f377b900ed7aa6ec69",
+    "path": "/Users/hakankilicaslan/Git/gedit/scripts/setup-plan.sh"
+  },
+  "scripts/check-task-prerequisites.sh": {
+    "fingerprint": "cf913e7c1da460b32e8136904ce46cbdba813129",
+    "path": "/Users/hakankilicaslan/Git/gedit/scripts/check-task-prerequisites.sh"
+  },
+  "scripts/update-agent-context.sh": {
+    "fingerprint": "6e37fe3ec876ea966dcbb65fdfc62aaad8ff0253",
+    "path": "/Users/hakankilicaslan/Git/gedit/scripts/update-agent-context.sh"
+  },
+  "scripts/get-feature-paths.sh": {
+    "fingerprint": "c87d070927928799cae8cce22fe50f77f45c1043",
+    "path": "/Users/hakankilicaslan/Git/gedit/scripts/get-feature-paths.sh"
+  },
+  "scripts/create-new-feature.sh": {
+    "fingerprint": "5c4fa2f7c2ecc74c3c270486cb697ec48ff3ebba",
+    "path": "/Users/hakankilicaslan/Git/gedit/scripts/create-new-feature.sh"
+  },
+  ".github/copilot-instructions.md": {
+    "fingerprint": "d6741f0c5566eda69ae85fbd7ae12bb306ab687c",
+    "path": "/Users/hakankilicaslan/Git/gedit/.github/copilot-instructions.md"
+  },
+  "templates/agent-file-template.md": {
+    "fingerprint": "d0b8e6d9dd71033fae28f86769b42b721f23d87b",
+    "path": "/Users/hakankilicaslan/Git/gedit/templates/agent-file-template.md"
+  },
+  "templates/tasks-template.md": {
+    "fingerprint": "90bf0927286016a62f0b232efd3c7a285dfa97d8",
+    "path": "/Users/hakankilicaslan/Git/gedit/templates/tasks-template.md"
+  },
+  "templates/spec-template.md": {
+    "fingerprint": "469521471a7081b57171f3423fa7bc67dce2d78c",
+    "path": "/Users/hakankilicaslan/Git/gedit/templates/spec-template.md"
+  },
+  "templates/plan-template.md": {
+    "fingerprint": "4bc5501419dea7b175c55a45029f3ac7ee179778",
+    "path": "/Users/hakankilicaslan/Git/gedit/templates/plan-template.md"
+  },
+  ".vscode/settings.json": {
+    "fingerprint": "6887bf255fd4a491661f7866914b4be9ec029487",
+    "path": "/Users/hakankilicaslan/Git/gedit/.vscode/settings.json"
+  },
+  ".github/prompts/todo.prompt.md": {
+    "fingerprint": "2a021cc21d40931761816d90dda1d7b11031bd2a",
+    "path": "/Users/hakankilicaslan/Git/gedit/.github/prompts/todo.prompt.md"
+  },
+  ".github/prompts/plan.prompt.md": {
+    "fingerprint": "e702071eb72497cd54e84ae2644e0b4fa8464a64",
+    "path": "/Users/hakankilicaslan/Git/gedit/.github/prompts/plan.prompt.md"
+  },
+  ".github/prompts/specify.prompt.md": {
+    "fingerprint": "20fe6e5abe55188adb0d2f687c638e9cefe04064",
+    "path": "/Users/hakankilicaslan/Git/gedit/.github/prompts/specify.prompt.md"
+  },
+  ".github/prompts/tasks.prompt.md": {
+    "fingerprint": "1cb03b40121fd9f8398a0ccd8dfdd04bd025bdcf",
+    "path": "/Users/hakankilicaslan/Git/gedit/.github/prompts/tasks.prompt.md"
+  },
+  "tests/contract/test_editor_undo_03_redo.py": {
+    "fingerprint": "6ab8f1df03be8a04d156742da2c32ac95197336e",
+    "path": "/Users/hakankilicaslan/Git/gedit/tests/contract/test_editor_undo_03_redo.py"
+  },
+  "tests/contract/test_editor_undo_04_history_cap.py": {
+    "fingerprint": "fc3aa39d60ee7a7bcc9bb2544f9e4812ffb3eef9",
+    "path": "/Users/hakankilicaslan/Git/gedit/tests/contract/test_editor_undo_04_history_cap.py"
+  },
+  "tests/contract/test_editor_undo_02_group_on_enter.py": {
+    "fingerprint": "6d1a9d1d8ba0c193efb44ea2207987c387bfb449",
+    "path": "/Users/hakankilicaslan/Git/gedit/tests/contract/test_editor_undo_02_group_on_enter.py"
+  },
+  "tests/contract/test_editor_undo_01_typed_text.py": {
+    "fingerprint": "f62897b75f7e6d7fb9beab93f558b50803560196",
+    "path": "/Users/hakankilicaslan/Git/gedit/tests/contract/test_editor_undo_01_typed_text.py"
+  },
+  "tests/integration/test_editor_shortcuts.py": {
+    "fingerprint": "44f6a470f5f5d203fdc3f9c0f6b1f11c02ca32fa",
+    "path": "/Users/hakankilicaslan/Git/gedit/tests/integration/test_editor_shortcuts.py"
+  },
+  "specs/002-editor-undo-redo/quickstart.md": {
+    "fingerprint": "ee4eb3f3a5c90a122a27f63d0e529f7f5ca35153",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/002-editor-undo-redo/quickstart.md"
+  },
+  "specs/002-editor-undo-redo/tasks.md": {
+    "fingerprint": "fe9b4d346a8c729064187b742c63063cc88b9ccf",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/002-editor-undo-redo/tasks.md"
+  },
+  "specs/002-editor-undo-redo/research.md": {
+    "fingerprint": "b2debb14086d0769867d225ad05c15994b8073d0",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/002-editor-undo-redo/research.md"
+  },
+  "specs/002-editor-undo-redo/data-model.md": {
+    "fingerprint": "0cf48679d30b4d43960da16630f731aef9b984e6",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/002-editor-undo-redo/data-model.md"
+  },
+  "specs/002-editor-undo-redo/plan.md": {
+    "fingerprint": "c6518c26d29ff91707c3edffb78baffe15af9156",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/002-editor-undo-redo/plan.md"
+  },
+  "specs/002-editor-undo-redo/spec.md": {
+    "fingerprint": "612c81151ab13f97c73f5c111e70d9d4e3818fc0",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/002-editor-undo-redo/spec.md"
+  },
+  "specs/001-title-iso-6983/quickstart.md": {
+    "fingerprint": "38af17e680e304e2d7173d1ec7e848d9c4da7eb2",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/001-title-iso-6983/quickstart.md"
+  },
+  "specs/001-title-iso-6983/tasks.md": {
+    "fingerprint": "a469bac9e136437b291a8d899ab686ed421a2e30",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/001-title-iso-6983/tasks.md"
+  },
+  "specs/001-title-iso-6983/research.md": {
+    "fingerprint": "f633877f05030e49e871445cd825ccac57ad069f",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/001-title-iso-6983/research.md"
+  },
+  "specs/001-title-iso-6983/data-model.md": {
+    "fingerprint": "0c1776621da9334b0958bf97cb2700db9faca108",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/001-title-iso-6983/data-model.md"
+  },
+  "specs/001-title-iso-6983/plan.md": {
+    "fingerprint": "68d42d66c7dfc5f1d9d38b62b99e0e8d1a7725bd",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/001-title-iso-6983/plan.md"
+  },
+  "specs/001-title-iso-6983/spec.md": {
+    "fingerprint": "1e6d9b8791f65e4a3ea5ca0650f55be70cef1109",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/001-title-iso-6983/spec.md"
+  },
+  "specs/001-title-iso-6983/contracts/parser.md": {
+    "fingerprint": "15187f3b3ad5eae3d33561ee4db8b57739ac1c44",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/001-title-iso-6983/contracts/parser.md"
+  },
+  "specs/002-editor-undo-redo/contracts/editor_undo.md": {
+    "fingerprint": "9e6b1016fc215d3b8f7f7fd15d16c8ebcdd87a6a",
+    "path": "/Users/hakankilicaslan/Git/gedit/specs/002-editor-undo-redo/contracts/editor_undo.md"
+  },
+  "app/data/__init__.py": {
+    "fingerprint": "f0eea9fedad478581493ae13c92b42515508e055",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/data/__init__.py"
+  },
+  "app/data/gcode_definitions.json": {
+    "fingerprint": "6aa437130e13449186826e534dccd090e6ed0935",
+    "path": "/Users/hakankilicaslan/Git/gedit/app/data/gcode_definitions.json"
+  }
+}

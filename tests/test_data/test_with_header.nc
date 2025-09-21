@@ -1,0 +1,7 @@
+; Program with header
+G17 G21 G90 G94
+M3 S1000
+G0 X0 Y0
+G1 X10 Y10 F100
+M5
+M30

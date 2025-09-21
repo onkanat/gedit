@@ -1,0 +1,6 @@
+; Arc processing test file
+G17 G21 G90
+G0 X0 Y0
+G2 X10 Y0 R5
+G3 X20 Y0 I5 J0
+G2 X30 Y0 I5 J0 R5
