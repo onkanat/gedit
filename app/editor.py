@@ -5,36 +5,38 @@ import json
 import os
 import time
 
+
 class LineNumbers(tk.Canvas):
     """
     Satır numaralarını gösteren canvas.
     Text widget'ı ile entegre çalışır ve editördeki satır numaralarını gösterir.
     """
+
     def __init__(self, parent, text_widget, *args, **kwargs):
         super().__init__(parent, width=30, *args, **kwargs)
         self.text_widget = text_widget
         self.redraw()  # İlk çizim
-        
+
         # Text widget'ın scroll ve değişiklik olaylarını dinle
         # Sadece gerekli olaylarda redraw çağrılır (performans için throttle)
-        self.text_widget.bind('<KeyRelease>', self.redraw)
-        self.text_widget.bind('<MouseWheel>', self.redraw)
-        self.text_widget.bind('<Configure>', self.redraw)
+        self.text_widget.bind("<KeyRelease>", self.redraw)
+        self.text_widget.bind("<MouseWheel>", self.redraw)
+        self.text_widget.bind("<Configure>", self.redraw)
 
     def redraw(self, *args):
         """
         Satır numaralarını yeniden çizer.
         Text widget'ın görünür alanına göre günceller.
         """
-        self.delete('all')  # Canvas'ı temizle
-        
+        self.delete("all")  # Canvas'ı temizle
+
         # Görünür alan hesaplaması
         first_line = self.text_widget.index("@0,0")
         last_line = self.text_widget.index(f"@0,{self.text_widget.winfo_height()}")
-        
+
         first_line_num = int(float(first_line))
         last_line_num = int(float(last_line)) + 1
-        
+
         # Her satır için numara çiz
         for line_num in range(first_line_num, last_line_num):
             dline = self.text_widget.dlineinfo(f"{line_num}.0")
@@ -42,24 +44,26 @@ class LineNumbers(tk.Canvas):
                 y = dline[1]  # Y koordinatı
                 self.create_text(
                     15,  # X koordinatı (ortalanmış)
-                    y,   # Y koordinatı
+                    y,  # Y koordinatı
                     text=str(line_num),
-                    anchor='n',
-                    fill='gray50',
-                    font=self.text_widget['font']
+                    anchor="n",
+                    fill="gray50",
+                    font=self.text_widget["font"],
                 )
-        
+
         self.after(10, self.redraw)  # Periyodik güncelleme
+
 
 class EditorFrame(tk.Frame):
     """
     Editör frame'ini saran ana sınıf.
     GCodeEditor widget'ını içerir ve dışarıya erişim sağlar.
     """
+
     def __init__(self, master=None, **kwargs):
         super().__init__(master)
         self.editor = GCodeEditor(self, **kwargs)
-        
+
     def get_editor(self):
         """
         Editör örneğini döndürür.
@@ -67,23 +71,25 @@ class EditorFrame(tk.Frame):
         """
         return self.editor
 
+
 class GCodeEditor(tk.Text):
     """
     G-code için özelleştirilmiş gelişmiş bir Tkinter Text widget'ı.
     Otomatik tamamlama, satır numarası, tooltip ve sözdizimi vurgulama içerir.
     """
+
     def __init__(self, master=None, **kwargs):
         # Varsayılan font ayarı
-        if 'font' not in kwargs:
-            kwargs['font'] = ('Courier', 14)
+        if "font" not in kwargs:
+            kwargs["font"] = ("Courier", 14)
 
         # Text widget'ı oluştur
         super().__init__(master, **kwargs)
 
         # Scrollbar ve line numbers
-        self.scrollbar = ttk.Scrollbar(master, orient='vertical', command=self.yview)
+        self.scrollbar = ttk.Scrollbar(master, orient="vertical", command=self.yview)
         self.configure(yscrollcommand=self.scrollbar.set)
-        self.line_numbers = LineNumbers(master, self, bg='#f0f0f0')
+        self.line_numbers = LineNumbers(master, self, bg="#f0f0f0")
 
         # Widget'ları yerleştir
         self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
@@ -96,31 +102,35 @@ class GCodeEditor(tk.Text):
         self.tooltip = None
 
         # G-code tanımlarını JSON dosyasından yükle (global cache)
-        if not hasattr(GCodeEditor, '_gcode_keywords_cache'):
+        if not hasattr(GCodeEditor, "_gcode_keywords_cache"):
             GCodeEditor._gcode_keywords_cache = self.load_gcode_definitions()
         self.keywords = GCodeEditor._gcode_keywords_cache
 
         # Text tag'leri oluştur
-        self.tag_configure("gcode_letter", foreground="blue", font=(kwargs['font'][0], kwargs['font'][1], "bold"))
+        self.tag_configure(
+            "gcode_letter",
+            foreground="blue",
+            font=(kwargs["font"][0], kwargs["font"][1], "bold"),
+        )
         # Diagnostik etiketleri (hata/uyarı satır vurguları)
         self.tag_configure("error_line", background="#ffefef")
         self.tag_configure("warning_line", background="#fff9db")
 
         # Event bindings
-        self.bind('<KeyPress>', self.handle_keypress)
-        self.bind('<KeyRelease>', self.show_suggestions)
-        self.bind('<Control-space>', self.force_suggestions)
-        self.bind('<Button-1>', self.handle_click)
-        self.bind('<Control-x>', self.cut)
-        self.bind('<Control-c>', self.copy)
-        self.bind('<Control-v>', self.paste)
-        self.bind('<Motion>', self.show_tooltip)
+        self.bind("<KeyPress>", self.handle_keypress)
+        self.bind("<KeyRelease>", self.show_suggestions)
+        self.bind("<Control-space>", self.force_suggestions)
+        self.bind("<Button-1>", self.handle_click)
+        self.bind("<Control-x>", self.cut)
+        self.bind("<Control-c>", self.copy)
+        self.bind("<Control-v>", self.paste)
+        self.bind("<Motion>", self.show_tooltip)
         # Enter/Tab özel davranışları
-        self.bind('<Return>', self.handle_return)
-        self.bind('<Tab>', self.handle_tab)
+        self.bind("<Return>", self.handle_return)
+        self.bind("<Tab>", self.handle_tab)
         # Yapıştırma ve odak değişimi
-        self.bind('<<Paste>>', self._on_paste)
-        self.bind('<FocusOut>', self._on_focus_out)
+        self.bind("<<Paste>>", self._on_paste)
+        self.bind("<FocusOut>", self._on_focus_out)
 
         # Undo/Redo ve gruplama durumu
         self.undo_enabled = True
@@ -135,14 +145,28 @@ class GCodeEditor(tk.Text):
             pass
 
         # Kısayollar (platformlar arası)
-        self.bind('<Control-z>', self._on_undo)
-        self.bind('<Control-y>', self._on_redo)
-        self.bind('<Control-Shift-Z>', self._on_redo)
-        self.bind('<Command-z>', self._on_undo)
-        self.bind('<Shift-Command-Z>', self._on_redo)
+        self.bind("<Control-z>", self._on_undo)
+        self.bind("<Control-y>", self._on_redo)
+        self.bind("<Control-Shift-Z>", self._on_redo)
+        self.bind("<Command-z>", self._on_undo)
+        self.bind("<Shift-Command-Z>", self._on_redo)
 
         # G-code harfleri listesi
-        self.gcode_letters = {'g', 'x', 'y', 'z', 'm', 'i', 'j', 'k', 'f', 'r', 's', 't', 'n'}
+        self.gcode_letters = {
+            "g",
+            "x",
+            "y",
+            "z",
+            "m",
+            "i",
+            "j",
+            "k",
+            "f",
+            "r",
+            "s",
+            "t",
+            "n",
+        }
 
     def load_gcode_definitions(self):
         """
@@ -151,10 +175,12 @@ class GCodeEditor(tk.Text):
         """
         try:
             # Dosya yolunu belirle
-            json_path = os.path.join(os.path.dirname(__file__), 'data', 'gcode_definitions.json')
-            
+            json_path = os.path.join(
+                os.path.dirname(__file__), "data", "gcode_definitions.json"
+            )
+
             # JSON dosyasını oku
-            with open(json_path, 'r', encoding='utf-8') as file:
+            with open(json_path, "r", encoding="utf-8") as file:
                 return json.load(file)
         except Exception as e:
             print(f"G-code tanımları yüklenemedi: {e}")
@@ -167,8 +193,8 @@ class GCodeEditor(tk.Text):
         :return: str, mevcut kelime
         """
         current_line = self.get("insert linestart", "insert")
-        match = re.search(r'[A-Za-z0-9]*$', current_line)
-        return match.group(0) if match else ''
+        match = re.search(r"[A-Za-z0-9]*$", current_line)
+        return match.group(0) if match else ""
 
     def show_suggestions(self, event=None):
         """
@@ -176,12 +202,16 @@ class GCodeEditor(tk.Text):
         :param event: Klavye olayı (isteğe bağlı)
         """
         # Sadece harf veya silme tuşlarında tetiklenir
-        if event and not (event.char.isalpha() or event.keysym in ['space', 'BackSpace']):
+        if event and not (
+            event.char.isalpha() or event.keysym in ["space", "BackSpace"]
+        ):
             return
         current_word = self.get_current_word()
         if len(current_word) >= 1:
             # startswith yerine substring eşleşme (daha akıllı)
-            suggestions = [k for k in self.keywords.keys() if current_word.lower() in k.lower()]
+            suggestions = [
+                k for k in self.keywords.keys() if current_word.lower() in k.lower()
+            ]
             if suggestions:
                 self.show_suggestions_window(suggestions)
             elif self.suggestions_window:
@@ -194,21 +224,26 @@ class GCodeEditor(tk.Text):
         Otomatik tamamlama öneri penceresini gösterir veya günceller.
         :param suggestions: list, öneri anahtarları
         """
+
         # Yardımcı: Görüntülenecek metni kısalt (uzun açıklamalar pencereyi taşırmasın)
         def _display_text(key: str, max_len: int = 60) -> str:
-            desc = str(self.keywords.get(key, ''))
+            desc = str(self.keywords.get(key, ""))
             text = f"{key} - {desc}"
             if len(text) > max_len:
-                return text[: max_len - 1] + '…'
+                return text[: max_len - 1] + "…"
             return text
 
         # Kısa metinleri önceden hazırla ve genişlik/uzunluk sınırlarını hesapla
         display_items = [_display_text(k) for k in suggestions]
         width_chars = max((len(s) for s in display_items), default=24)
         width_chars = max(24, min(50, width_chars))  # 24..50 karakter arası sabitle
-        height_rows = min(len(display_items), 8)     # en fazla 8 satır göster
+        height_rows = min(len(display_items), 8)  # en fazla 8 satır göster
         # Pencere zaten varsa sadece güncelle
-        if self.suggestions_window and self.suggestions_window.winfo_exists() and self._suggestion_listbox:
+        if (
+            self.suggestions_window
+            and self.suggestions_window.winfo_exists()
+            and self._suggestion_listbox
+        ):
             listbox = self._suggestion_listbox
             listbox.delete(0, tk.END)
             for display_text in display_items:
@@ -240,12 +275,14 @@ class GCodeEditor(tk.Text):
         except Exception:
             pass
 
-        listbox = tk.Listbox(self.suggestions_window,
-                             selectmode=tk.SINGLE,
-                             activestyle='none',
-                             height=height_rows,
-                             width=width_chars,
-                             font=self['font'])
+        listbox = tk.Listbox(
+            self.suggestions_window,
+            selectmode=tk.SINGLE,
+            activestyle="none",
+            height=height_rows,
+            width=width_chars,
+            font=self["font"],
+        )
         listbox.pack(fill=tk.BOTH, expand=True)
         for display_text in display_items:
             listbox.insert(tk.END, display_text)
@@ -266,10 +303,10 @@ class GCodeEditor(tk.Text):
         if y + req_h > screen_h - 8:
             y = max(0, y - req_h - (h if isinstance(h, int) else 0) - 4)
         self.suggestions_window.geometry(f"+{x}+{y}")
-        listbox.bind('<Double-Button-1>', self.apply_selected_suggestion)
-        listbox.bind('<Return>', self.apply_selected_suggestion)
-        listbox.bind('<Escape>', self.close_suggestions)
-        listbox.bind('<FocusOut>', lambda e: self.after(100, self.close_suggestions))
+        listbox.bind("<Double-Button-1>", self.apply_selected_suggestion)
+        listbox.bind("<Return>", self.apply_selected_suggestion)
+        listbox.bind("<Escape>", self.close_suggestions)
+        listbox.bind("<FocusOut>", lambda e: self.after(100, self.close_suggestions))
         self.suggestions_window.update_idletasks()
         self.suggestions_window.lift()
         self.focus_set()
@@ -285,19 +322,17 @@ class GCodeEditor(tk.Text):
             return "break"
         listbox = self._suggestion_listbox
         current = listbox.curselection()
-        if event.keysym == 'Up' and current and current[0] > 0:
+        if event.keysym == "Up" and current and current[0] > 0:
             listbox.selection_clear(current)
             new_index = current[0] - 1
             listbox.selection_set(new_index)
             listbox.see(new_index)
-        elif event.keysym == 'Down' and current and current[0] < listbox.size() - 1:
+        elif event.keysym == "Down" and current and current[0] < listbox.size() - 1:
             listbox.selection_clear(current)
             new_index = current[0] + 1
             listbox.selection_set(new_index)
             listbox.see(new_index)
         return "break"
-
-    
 
     def handle_tab(self, event=None):
         """
@@ -316,7 +351,11 @@ class GCodeEditor(tk.Text):
         """
         if self.suggestions_window and self._suggestion_listbox:
             # Tıklama öneri penceresinde değilse kapat
-            if not (event and hasattr(event, 'widget') and event.widget == self._suggestion_listbox):
+            if not (
+                event
+                and hasattr(event, "widget")
+                and event.widget == self._suggestion_listbox
+            ):
                 self.close_suggestions()
 
     def apply_selected_suggestion(self, event=None):
@@ -329,12 +368,12 @@ class GCodeEditor(tk.Text):
         listbox = self._suggestion_listbox
         selection = listbox.curselection()
         if selection:
-            suggestion = listbox.get(selection[0]).split(' - ')[0]
+            suggestion = listbox.get(selection[0]).split(" - ")[0]
             current_word = self.get_current_word()
             if current_word:
                 position = "insert-{}c".format(len(current_word))
                 self.delete(position, "insert")
-            self.insert("insert", suggestion + ' ')
+            self.insert("insert", suggestion + " ")
             self.close_suggestions()
             self.see(tk.INSERT)
             self.focus_set()
@@ -355,63 +394,195 @@ class GCodeEditor(tk.Text):
     def show_tooltip(self, event=None):
         """
         İmleçteki kelime için tooltip (ipucu) gösterir.
+        Enhanced parser diagnostiklerini de destekler.
         :param event: Mouse olayı (isteğe bağlı)
         """
         if self.tooltip:
             self.tooltip.destroy()
-        if not event or not hasattr(event, 'x') or not hasattr(event, 'y'):
+        if not event or not hasattr(event, "x") or not hasattr(event, "y"):
             return
         x, y = event.x, event.y
         try:
             index = self.index(f"@{x},{y}")
+            line_no = int(float(index))  # Satır numarasını al
         except Exception:
             return
+
         word_start = self.get(f"{index} wordstart", f"{index} wordend")
-        if word_start in self.keywords:
+
+        # Enhanced parser diagnostiklerini kontrol et
+        diagnostic_info = self._get_diagnostic_for_line(line_no)
+
+        # G-code komut açıklaması veya diagnostik bilgisi göster
+        if word_start in self.keywords or diagnostic_info:
             self.tooltip = tk.Toplevel()
             self.tooltip.wm_overrideredirect(True)
-            frame = tk.Frame(self.tooltip, bg="lightyellow", borderwidth=1, relief="solid")
+            frame = tk.Frame(
+                self.tooltip, bg="lightyellow", borderwidth=1, relief="solid"
+            )
             frame.pack(padx=5, pady=5)
-            command_label = tk.Label(frame, 
-                                   text=word_start,
-                                   font=("Arial", 14, "bold"),
-                                   bg="lightyellow",
-                                   anchor="w")
-            command_label.pack(fill="x", padx=5, pady=2)
-            desc_text = self.keywords[word_start]
-            desc_parts = desc_text.split("**")
-            for i, part in enumerate(desc_parts):
-                if i % 2 == 1:
-                    example_label = tk.Label(frame,
-                                          text=part,
-                                          font=("Consolas", 14),
-                                          bg="white",
-                                          fg="darkblue",
-                                          pady=2,
-                                          anchor="w")
-                    example_label.pack(fill="x", padx=5)
-                else:
-                    if part.strip():
-                        desc_label = tk.Label(frame,
-                                            text=part,
-                                            font=("Arial", 14),
-                                            bg="lightyellow",
-                                            wraplength=400,
-                                            justify="left",
-                                            anchor="w")
-                        desc_label.pack(fill="x", padx=5)
+
+            # Diagnostik bilgisi varsa önce onu göster
+            if diagnostic_info:
+                self._show_diagnostic_info(frame, diagnostic_info)
+
+                # Ayırıcı çizgi
+                if word_start in self.keywords:
+                    separator = tk.Frame(frame, height=2, bg="gray")
+                    separator.pack(fill="x", padx=5, pady=5)
+
+            # G-code komut açıklaması göster
+            if word_start in self.keywords:
+                self._show_command_info(frame, word_start)
+
             # Tooltip'i fare pozisyonunun yanına yerleştir
-            if hasattr(event, 'x_root') and hasattr(event, 'y_root'):
+            if hasattr(event, "x_root") and hasattr(event, "y_root"):
                 self.tooltip.geometry(f"+{event.x_root+15}+{event.y_root+10}")
+
             # Tooltip penceresine hover efekti ekle
             def on_enter(e):
                 if self.tooltip:
-                    self.tooltip.attributes('-alpha', 1.0)
+                    self.tooltip.attributes("-alpha", 1.0)
+
             def on_leave(e):
                 if self.tooltip:
-                    self.tooltip.attributes('-alpha', 0.9)
-            frame.bind('<Enter>', on_enter)
-            frame.bind('<Leave>', on_leave)
+                    self.tooltip.attributes("-alpha", 0.9)
+
+            frame.bind("<Enter>", on_enter)
+            frame.bind("<Leave>", on_leave)
+
+    def _get_diagnostic_for_line(self, line_no):
+        """Enhanced parser diagnostik bilgisini belirtilen satır için getir."""
+        if not hasattr(self, "last_parse_result") or not self.last_parse_result:
+            return None
+
+        paths = self.last_parse_result.get("paths", [])
+        for p in paths:
+            if p.get("line_no") == line_no and "enhanced_diagnostic" in p:
+                return p["enhanced_diagnostic"]
+        return None
+
+    def _show_diagnostic_info(self, parent_frame, diagnostic_info):
+        """Enhanced parser diagnostik bilgisini tooltip'te göster."""
+        severity = diagnostic_info.get("severity", "info")
+        category = diagnostic_info.get("category", "general")
+        error_code = diagnostic_info.get("error_code", "")
+        message = diagnostic_info.get("message", "")
+
+        # Hata/uyarı başlığı
+        severity_colors = {"error": "#ff4444", "warning": "#ff8800", "info": "#0088ff"}
+        color = severity_colors.get(severity, "#666666")
+
+        header_text = f"{severity.upper()}"
+        if error_code:
+            header_text += f" [{error_code}]"
+        if category:
+            header_text += f" - {category.title()}"
+
+        header_label = tk.Label(
+            parent_frame,
+            text=header_text,
+            font=("Arial", 12, "bold"),
+            bg="lightyellow",
+            fg=color,
+            anchor="w",
+        )
+        header_label.pack(fill="x", padx=5, pady=2)
+
+        # Mesaj
+        if message:
+            message_label = tk.Label(
+                parent_frame,
+                text=message,
+                font=("Arial", 11),
+                bg="lightyellow",
+                wraplength=400,
+                justify="left",
+                anchor="w",
+            )
+            message_label.pack(fill="x", padx=5, pady=1)
+
+        # Koordinat detayları (varsa)
+        if "axis" in diagnostic_info and "value" in diagnostic_info:
+            axis = diagnostic_info["axis"]
+            value = diagnostic_info["value"]
+            threshold = diagnostic_info.get("threshold")
+
+            detail_text = f"Eksen: {axis}, Değer: {value:.3f}"
+            if threshold:
+                detail_text += f", Sınır: ±{threshold:.0f}"
+
+            detail_label = tk.Label(
+                parent_frame,
+                text=detail_text,
+                font=("Consolas", 10),
+                bg="white",
+                fg="darkred",
+                anchor="w",
+            )
+            detail_label.pack(fill="x", padx=5, pady=1)
+
+        # Öneriler (varsa)
+        suggestions = diagnostic_info.get("suggestions", [])
+        if suggestions:
+            suggest_label = tk.Label(
+                parent_frame,
+                text="Öneriler:",
+                font=("Arial", 10, "bold"),
+                bg="lightyellow",
+                anchor="w",
+            )
+            suggest_label.pack(fill="x", padx=5, pady=(5, 1))
+
+            for suggestion in suggestions[:3]:  # En fazla 3 öneri göster
+                suggest_item = tk.Label(
+                    parent_frame,
+                    text=f"• {suggestion}",
+                    font=("Arial", 10),
+                    bg="lightyellow",
+                    wraplength=380,
+                    justify="left",
+                    anchor="w",
+                )
+                suggest_item.pack(fill="x", padx=10, pady=1)
+
+    def _show_command_info(self, parent_frame, command):
+        """G-code komut bilgisini tooltip'te göster."""
+        command_label = tk.Label(
+            parent_frame,
+            text=command,
+            font=("Arial", 14, "bold"),
+            bg="lightyellow",
+            anchor="w",
+        )
+        command_label.pack(fill="x", padx=5, pady=2)
+
+        desc_text = self.keywords[command]
+        desc_parts = desc_text.split("**")
+        for i, part in enumerate(desc_parts):
+            if i % 2 == 1:
+                example_label = tk.Label(
+                    parent_frame,
+                    text=part,
+                    font=("Consolas", 14),
+                    bg="white",
+                    fg="darkblue",
+                    pady=2,
+                    anchor="w",
+                )
+                example_label.pack(fill="x", padx=5)
+            else:
+                if part.strip():
+                    desc_label = tk.Label(
+                        parent_frame,
+                        text=part,
+                        font=("Arial", 14),
+                        bg="lightyellow",
+                        wraplength=400,
+                        justify="left",
+                        anchor="w",
+                    )
+                    desc_label.pack(fill="x", padx=5)
 
     def force_suggestions(self, event=None):
         """
@@ -419,8 +590,11 @@ class GCodeEditor(tk.Text):
         :param event: Klavye olayı (isteğe bağlı)
         """
         current_word = self.get_current_word()
-        suggestions = [k for k in self.keywords.keys() 
-                      if k.lower().startswith(current_word.lower())]
+        suggestions = [
+            k
+            for k in self.keywords.keys()
+            if k.lower().startswith(current_word.lower())
+        ]
         if suggestions:
             self.show_suggestions_window(suggestions)
         return "break"
@@ -522,20 +696,26 @@ class GCodeEditor(tk.Text):
 
     def _tick_edit_timer(self):
         # Var olan zamanlayıcıyı iptal et
-        if getattr(self, '_idle_sep_after_id', None) is not None:
+        if getattr(self, "_idle_sep_after_id", None) is not None:
             try:
                 if self._idle_sep_after_id is not None:
                     self.after_cancel(self._idle_sep_after_id)
             except Exception:
                 pass
             self._idle_sep_after_id = None
+
         # Yeniden planla
         def _maybe_sep():
-            if self._last_edit_ts and (time.time() - self._last_edit_ts) * 1000.0 >= self.group_threshold_ms:
+            if (
+                self._last_edit_ts
+                and (time.time() - self._last_edit_ts) * 1000.0
+                >= self.group_threshold_ms
+            ):
                 self.add_undo_separator()
                 self._idle_sep_after_id = None
             else:
                 self._idle_sep_after_id = self.after(50, _maybe_sep)
+
         self._idle_sep_after_id = self.after(50, _maybe_sep)
 
     def handle_keypress(self, event):
@@ -551,11 +731,11 @@ class GCodeEditor(tk.Text):
             self.tag_add("gcode_letter", "insert-1c", "insert")
             return "break"
         elif self.suggestions_window:
-            if event.keysym in ('Up', 'Down'):
+            if event.keysym in ("Up", "Down"):
                 return self.navigate_suggestions(event)
-            elif event.keysym in ('Return', 'Tab'):
+            elif event.keysym in ("Return", "Tab"):
                 return self.apply_selected_suggestion(event)
-            elif event.keysym == 'Escape':
+            elif event.keysym == "Escape":
                 return self.close_suggestions()
         # Düzenleme zaman damgasını güncelle
         self._mark_edited()
@@ -575,7 +755,9 @@ class GCodeEditor(tk.Text):
             pass
 
         # G-code harflerini kontrol et ve büyük harfe çevirerek tek seferde ekle
-        transformed = ''.join((c.upper() if c.lower() in self.gcode_letters else c) for c in chars)
+        transformed = "".join(
+            (c.upper() if c.lower() in self.gcode_letters else c) for c in chars
+        )
         start_index = self.index(index)
         super().insert(index, transformed, *args)
 
@@ -594,7 +776,7 @@ class GCodeEditor(tk.Text):
         Tuş bırakıldığında çalışır, otomatik tamamlama tetikleyebilir.
         :param event: Klavye olayı (isteğe bağlı)
         """
-        if event and hasattr(event, 'char') and event.char and not event.char.isspace():
+        if event and hasattr(event, "char") and event.char and not event.char.isspace():
             self.highlight_current_line()
             self.show_suggestions(event)
 
@@ -627,30 +809,90 @@ class GCodeEditor(tk.Text):
     def annotate_parse_result(self, result):
         """
         parse_gcode çıktısına göre satırları hata/uyarı olarak vurgular.
+        Enhanced parser'ın yeni diagnostik yapısını destekler.
         :param result: dict, {'paths': [...], 'layers': [...]}
         :return: dict, {'errors': int, 'warnings': int}
         """
         self.clear_diagnostics()
+
+        # Parse sonucunu tooltip için sakla
+        self.last_parse_result = result
         errors = 0
         warnings = 0
         if not isinstance(result, dict):
-            return {'errors': 0, 'warnings': 0}
-        paths = result.get('paths') or []
+            return {"errors": 0, "warnings": 0}
+
+        paths = result.get("paths") or []
         for p in paths:
-            ptype = p.get('type')
-            line_no = p.get('line_no')
+            ptype = p.get("type")
+            line_no = p.get("line_no")
             if not line_no or not isinstance(line_no, int):
                 continue
+
             start = f"{line_no}.0"
             end = f"{line_no}.end"
-            if ptype in ('parse_error',):
+
+            # Enhanced parser'ın yeni diagnostik yapısını destekle
+            if ptype == "parse_error":
                 self.tag_add("error_line", start, end)
                 errors += 1
-            elif ptype in ('unsupported', 'unknown_param'):
+
+                # Enhanced diagnostik bilgisi varsa tooltip için kaydet
+                if "diagnostic" in p:
+                    diagnostic = p["diagnostic"]
+                    severity = diagnostic.get("severity", "error")
+                    category = diagnostic.get("category", "syntax")
+                    error_code = diagnostic.get("error_code", "E001")
+
+                    # Diagnostik bilgisini path'e ekle (tooltip için)
+                    p["enhanced_diagnostic"] = {
+                        "severity": severity,
+                        "category": category,
+                        "error_code": error_code,
+                        "suggestions": diagnostic.get("suggestions", []),
+                    }
+
+            elif ptype in ("unsupported", "unknown_param"):
                 self.tag_add("warning_line", start, end)
                 warnings += 1
+
+                # Uyarı seviyesini kontrol et
+                if "diagnostic" in p:
+                    diagnostic = p["diagnostic"]
+                    severity = diagnostic.get("severity", "warning")
+
+                    # Kritik uyarıları hata olarak işaretle
+                    if severity == "error":
+                        self.tag_remove("warning_line", start, end)
+                        self.tag_add("error_line", start, end)
+                        warnings -= 1
+                        errors += 1
+
+            elif ptype == "warning":
+                # Yeni warning tipi için destek
+                self.tag_add("warning_line", start, end)
+                warnings += 1
+
+                # Koordinat uyarıları için özel işleme
+                if "coordinate_warnings" in p:
+                    coord_warnings = p["coordinate_warnings"]
+                    if len(coord_warnings) > 0:
+                        # İlk koordinat uyarısının bilgisini kaydet
+                        first_warning = coord_warnings[0]
+                        p["enhanced_diagnostic"] = {
+                            "severity": "warning",
+                            "category": "coordinate",
+                            "error_code": "W001",
+                            "message": first_warning.get(
+                                "message", "Koordinat değeri normal sınırları aşıyor"
+                            ),
+                            "axis": first_warning.get("axis"),
+                            "value": first_warning.get("value"),
+                            "threshold": first_warning.get("threshold"),
+                        }
+
         # Son durum hafızada tutulsun (isteğe bağlı)
-        self.last_diagnostics = {'errors': errors, 'warnings': warnings}
+        self.last_diagnostics = {"errors": errors, "warnings": warnings}
         return self.last_diagnostics
 
     def highlight_current_line(self):
@@ -660,10 +902,10 @@ class GCodeEditor(tk.Text):
         """Mevcut satırdaki G-code harflerini vurgula"""
         # Mevcut satırı al
         current_line = self.get("insert linestart", "insert lineend")
-        
+
         # Satırdaki etiketleri temizle
         self.tag_remove("gcode_letter", "insert linestart", "insert lineend")
-        
+
         # G-code harflerini bul ve etiketle
         pos = 0
         for char in current_line:
@@ -684,6 +926,7 @@ class GCodeEditor(tk.Text):
                 start = f"1.0+{i}c"
                 end = f"1.0+{i+1}c"
                 self.tag_add("gcode_letter", start, end)
+
 
 def create_text_editor(root):
     """

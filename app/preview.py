@@ -1,4 +1,8 @@
 import tkinter as tk
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(__file__))
 from gcode_parser import parse_gcode
 import math  # math modülünü ekle
 from matplotlib.figure import Figure
@@ -128,6 +132,11 @@ def show_preview(editor, root):
     def compute_bounds(paths, forced_plane: str | None):
         min_x = min_y = min_z = float("inf")
         max_x = max_y = max_z = float("-inf")
+
+        # Düzleme göre projeksiyon koordinatları için sınırlar
+        min_proj_x = min_proj_y = float("inf")
+        max_proj_x = max_proj_y = float("-inf")
+
         for path in paths:
             # Sadece geçerli hareket yollarını işle
             if not (
@@ -157,12 +166,25 @@ def show_preview(editor, root):
                 for v in [start_x, start_y, start_z, end_x, end_y, end_z]
             ):
                 continue
+
+            # 3D sınırları (her zaman hesapla)
             min_x = min(min_x, start_x, end_x)
             max_x = max(max_x, start_x, end_x)
             min_y = min(min_y, start_y, end_y)
             max_y = max(max_y, start_y, end_y)
             min_z = min(min_z, start_z, end_z)
             max_z = max(max_z, start_z, end_z)
+
+            # 2D projeksiyon sınırları (forced_plane varsa)
+            if forced_plane:
+                plane = forced_plane or path.get("plane", "G17")
+                sx2, sy2 = project2d((start_x, start_y, start_z), plane)
+                ex2, ey2 = project2d((end_x, end_y, end_z), plane)
+                min_proj_x = min(min_proj_x, sx2, ex2)
+                max_proj_x = max(max_proj_x, sx2, ex2)
+                min_proj_y = min(min_proj_y, sy2, ey2)
+                max_proj_y = max(max_proj_y, sy2, ey2)
+
             if path["type"] == "arc" and "radius" in path and "center_relative" in path:
                 radius = path["radius"]
                 plane = forced_plane or path.get("plane", "G17")
@@ -177,11 +199,24 @@ def show_preview(editor, root):
                     cx = start_x + crx
                     cy = start_y + cry
                 if isinstance(radius, (int, float)):
+                    # 3D sınırlar için
                     min_x = min(min_x, cx - radius)
                     max_x = max(max_x, cx + radius)
                     min_y = min(min_y, cy - radius)
                     max_y = max(max_y, cy + radius)
-        return min_x, max_x, min_y, max_y, min_z, max_z
+
+                    # 2D projeksiyon sınırları için (forced_plane varsa)
+                    if forced_plane:
+                        min_proj_x = min(min_proj_x, cx - radius)
+                        max_proj_x = max(max_proj_x, cx + radius)
+                        min_proj_y = min(min_proj_y, cy - radius)
+                        max_proj_y = max(max_proj_y, cy + radius)
+
+        # forced_plane varsa projeksiyon sınırlarını döndür, yoksa 3D sınırları
+        if forced_plane and min_proj_x != float("inf"):
+            return min_proj_x, max_proj_x, min_proj_y, max_proj_y, min_z, max_z
+        else:
+            return min_x, max_x, min_y, max_y, min_z, max_z
 
     def compute_scale_and_offset(min_x, max_x, min_y, max_y):
         width = max_x - min_x

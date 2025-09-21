@@ -11,18 +11,22 @@ problems_tree = None  # Problems panelindeki Treeview
 status_var = None  # Status bar metni
 last_diag = {"errors": 0, "warnings": 0}
 
+
 def build_diagnostics_from_result(result):
     """parse_gcode sonucundan Problems paneli için teşhis listesi üretir."""
     diags = []
     if not isinstance(result, dict):
         return diags
-    for p in result.get('paths') or []:
-        ptype = p.get('type')
-        line_no = p.get('line_no')
-        if ptype in ("parse_error", "unsupported", "unknown_param") and isinstance(line_no, int):
-            msg = p.get('message') or p.get('raw') or ptype
+    for p in result.get("paths") or []:
+        ptype = p.get("type")
+        line_no = p.get("line_no")
+        if ptype in ("parse_error", "unsupported", "unknown_param") and isinstance(
+            line_no, int
+        ):
+            msg = p.get("message") or p.get("raw") or ptype
             diags.append({"type": ptype, "line": line_no, "message": str(msg)})
     return diags
+
 
 def clear_problems():
     """Problems panelini temizler."""
@@ -31,6 +35,7 @@ def clear_problems():
         return
     for i in problems_tree.get_children():
         problems_tree.delete(i)
+
 
 def populate_problems(result):
     """Problems panelini parse sonucuna göre doldurur."""
@@ -41,6 +46,7 @@ def populate_problems(result):
     for d in build_diagnostics_from_result(result):
         problems_tree.insert("", tk.END, values=(d["type"], d["line"], d["message"]))
 
+
 def on_problem_double_click(event=None):
     """Problems panelindeki bir satıra çift tıklandığında ilgili satıra git."""
     global problems_tree, editor
@@ -50,7 +56,7 @@ def on_problem_double_click(event=None):
     if not sel:
         return
     item = problems_tree.item(sel[0])
-    values = item.get('values') or []
+    values = item.get("values") or []
     if len(values) < 2:
         return
     try:
@@ -64,7 +70,8 @@ def on_problem_double_click(event=None):
     except Exception:
         pass
 
-def update_status(errors: int | None = None, warnings: int | None = None):
+
+def update_status(errors=None, warnings=None):
     """Status bar (Ln, Col, Errors, Warnings, Lines) bilgisini günceller."""
     global editor, status_var, last_diag
     if editor is None or status_var is None:
@@ -74,7 +81,7 @@ def update_status(errors: int | None = None, warnings: int | None = None):
         line_s, col_s = idx.split(".")
         line = int(line_s)
         col = int(col_s) + 1
-        total_lines = int(editor.index('end-1c').split('.')[0])
+        total_lines = int(editor.index("end-1c").split(".")[0])
     except Exception:
         line = 1
         col = 1
@@ -82,11 +89,15 @@ def update_status(errors: int | None = None, warnings: int | None = None):
     if errors is None or warnings is None:
         errors = last_diag.get("errors", 0) if errors is None else errors
         warnings = last_diag.get("warnings", 0) if warnings is None else warnings
-    status_var.set(f"Ln {line}, Col {col}    Errors: {errors}  Warnings: {warnings}  Lines: {total_lines}")
+    status_var.set(
+        f"Ln {line}, Col {col}    Errors: {errors}  Warnings: {warnings}  Lines: {total_lines}"
+    )
+
 
 def on_editor_activity(event=None):
     """Editörde klavye/tıklama gibi hareketlerde status bar'ı güncelle."""
     update_status()
+
 
 def check_syntax():
     """
@@ -102,16 +113,20 @@ def check_syntax():
     if not content:
         messagebox.showwarning("Uyarı", "Editör boş!")
         return
-    
+
     try:
         # parse_gcode fonksiyonunu kullanarak sözdizimi kontrolü
         result = parse_gcode(content)
         # Editörde satırları işaretle
-        diag = editor.annotate_parse_result(result) if (editor is not None and hasattr(editor, 'annotate_parse_result')) else {'errors': 0, 'warnings': 0}
+        diag = (
+            editor.annotate_parse_result(result)
+            if (editor is not None and hasattr(editor, "annotate_parse_result"))
+            else {"errors": 0, "warnings": 0}
+        )
         # Problems panelini doldur
         populate_problems(result)
-        errors = diag.get('errors', 0)
-        warnings = diag.get('warnings', 0)
+        errors = diag.get("errors", 0)
+        warnings = diag.get("warnings", 0)
         # Son teşhisleri kaydet ve status bar'ı güncelle
         global last_diag
         last_diag = {"errors": errors, "warnings": warnings}
@@ -122,9 +137,13 @@ def check_syntax():
             else:
                 messagebox.showinfo("Sözdizimi", "Hata ve uyarı yok.")
         else:
-            messagebox.showwarning("Sözdizimi", f"{errors} hata, {warnings} uyarı bulundu. Hatalı satırlar kırmızımsı, uyarılar sarımsı renkte vurgulandı.")
+            messagebox.showwarning(
+                "Sözdizimi",
+                f"{errors} hata, {warnings} uyarı bulundu. Hatalı satırlar kırmızımsı, uyarılar sarımsı renkte vurgulandı.",
+            )
     except Exception as e:
         messagebox.showerror("Hata", f"Sözdizimi hatası:\n{str(e)}")
+
 
 def save_file():
     """
@@ -138,13 +157,14 @@ def save_file():
     if current_file:
         content = editor.get("1.0", tk.END)
         try:
-            with open(current_file, 'w') as file:
+            with open(current_file, "w") as file:
                 file.write(content)
             messagebox.showinfo("Başarılı", f"Dosya kaydedildi:\n{current_file}")
         except Exception as e:
             messagebox.showerror("Hata", f"Dosya kaydedilemedi:\n{str(e)}")
     else:
         save_file_as()
+
 
 def save_file_as():
     """
@@ -155,11 +175,12 @@ def save_file_as():
     file_path = filedialog.asksaveasfilename(
         defaultextension=".nc",
         filetypes=[("NC files", "*.nc"), ("All files", "*.*")],
-        title="G-code Dosyasını Kaydet"
+        title="G-code Dosyasını Kaydet",
     )
     if file_path:
         current_file = file_path
         save_file()
+
 
 def load_file():
     """
@@ -172,11 +193,11 @@ def load_file():
         return
     file_path = filedialog.askopenfilename(
         filetypes=[("NC files", "*.nc"), ("All files", "*.*")],
-        title="G-code Dosyası Aç"
+        title="G-code Dosyası Aç",
     )
     if file_path:
         try:
-            with open(file_path, 'r') as file:
+            with open(file_path, "r") as file:
                 content = file.read()
             editor.delete("1.0", tk.END)
             editor.insert("1.0", content)
@@ -184,6 +205,7 @@ def load_file():
             messagebox.showinfo("Başarılı", f"Dosya yüklendi:\n{file_path}")
         except Exception as e:
             messagebox.showerror("Hata", f"Dosya yüklenemedi:\n{str(e)}")
+
 
 def new_file():
     """
@@ -197,9 +219,10 @@ def new_file():
     if editor.get("1.0", tk.END).strip():
         if messagebox.askyesno("Kaydet", "Mevcut değişiklikler kaydedilsin mi?"):
             save_file()
-    
+
     editor.delete("1.0", tk.END)
     current_file = None
+
 
 """
 Ana uygulama başlatıcı. Tkinter ana pencereyi ve editörü başlatır.
@@ -214,7 +237,7 @@ if __name__ == "__main__":
     # Editor frame'i oluştur
     editor_frame = create_text_editor(root)
     editor_frame.pack(fill=tk.BOTH, expand=True)
-    
+
     # Global editor referansını al
     editor = editor_frame.get_editor()
 
@@ -224,22 +247,32 @@ if __name__ == "__main__":
     button_frame = tk.Frame(root)
     button_frame.pack(pady=5)
 
-    tk.Button(button_frame, text="Check Syntax", command=check_syntax).pack(side=tk.LEFT, padx=5)
-    tk.Button(button_frame, text="Preview", command=lambda: show_preview(editor, root)).pack(side=tk.LEFT, padx=5)
-    tk.Button(button_frame, text="Save As...", command=save_file_as).pack(side=tk.LEFT, padx=5)
+    tk.Button(button_frame, text="Check Syntax", command=check_syntax).pack(
+        side=tk.LEFT, padx=5
+    )
+    tk.Button(
+        button_frame, text="Preview", command=lambda: show_preview(editor, root)
+    ).pack(side=tk.LEFT, padx=5)
+    tk.Button(button_frame, text="Save As...", command=save_file_as).pack(
+        side=tk.LEFT, padx=5
+    )
 
     # Problems paneli
     problems_frame = tk.Frame(root)
     problems_frame.pack(fill=tk.BOTH, expand=False, padx=5, pady=(0, 0))
     columns = ("type", "line", "message")
-    problems_tree = ttk.Treeview(problems_frame, columns=columns, show="headings", height=6)
+    problems_tree = ttk.Treeview(
+        problems_frame, columns=columns, show="headings", height=6
+    )
     problems_tree.heading("type", text="Type")
     problems_tree.heading("line", text="Line")
     problems_tree.heading("message", text="Message")
     problems_tree.column("type", width=120, anchor=tk.W)
     problems_tree.column("line", width=60, anchor=tk.CENTER)
     problems_tree.column("message", width=600, anchor=tk.W)
-    yscroll = ttk.Scrollbar(problems_frame, orient="vertical", command=problems_tree.yview)
+    yscroll = ttk.Scrollbar(
+        problems_frame, orient="vertical", command=problems_tree.yview
+    )
     problems_tree.configure(yscrollcommand=yscroll.set)
     problems_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     yscroll.pack(side=tk.RIGHT, fill=tk.Y)
@@ -254,8 +287,8 @@ if __name__ == "__main__":
     status_label.configure(textvariable=status_var)
 
     # Editör etkinliklerine status güncellemesi bağla
-    editor.bind('<KeyRelease>', on_editor_activity, add=True)
-    editor.bind('<Button-1>', on_editor_activity, add=True)
+    editor.bind("<KeyRelease>", on_editor_activity, add=True)
+    editor.bind("<Button-1>", on_editor_activity, add=True)
     update_status()
 
     root.mainloop()
