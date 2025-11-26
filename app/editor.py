@@ -8,25 +8,46 @@ import time
 
 class LineNumbers(tk.Canvas):
     """
-    Satır numaralarını gösteren canvas.
-    Text widget'ı ile entegre çalışır ve editördeki satır numaralarını gösterir.
+    Canvas widget for displaying line numbers in the G-code editor.
+
+    This class integrates with a Text widget to show line numbers that
+    scroll synchronously with the text content. It provides visual feedback
+    for code navigation and debugging purposes.
+
+    Attributes:
+        text_widget (tk.Text): The associated text widget for line tracking
     """
 
     def __init__(self, parent, text_widget, *args, **kwargs):
+        """
+        Initialize the line numbers canvas.
+
+        Args:
+            parent: Parent widget (typically the main window or frame)
+            text_widget (tk.Text): The text widget to track for line numbers
+            *args: Additional positional arguments for Canvas
+            **kwargs: Additional keyword arguments for Canvas
+        """
         super().__init__(parent, width=30, *args, **kwargs)
         self.text_widget = text_widget
-        self.redraw()  # İlk çizim
+        self.redraw()  # Initial drawing
 
-        # Text widget'ın scroll ve değişiklik olaylarını dinle
-        # Sadece gerekli olaylarda redraw çağrılır (performans için throttle)
+        # Bind to text widget scroll and change events
+        # Redraw is called only on necessary events for performance throttling
         self.text_widget.bind("<KeyRelease>", self.redraw)
         self.text_widget.bind("<MouseWheel>", self.redraw)
         self.text_widget.bind("<Configure>", self.redraw)
 
     def redraw(self, *args):
         """
-        Satır numaralarını yeniden çizer.
-        Text widget'ın görünür alanına göre günceller.
+        Redraw line numbers based on visible text area.
+
+        Clears the canvas and redraws line numbers for the currently
+        visible portion of the text widget. Uses efficient calculation
+        to only draw numbers that are actually visible.
+
+        Args:
+            *args: Event arguments (ignored, for binding compatibility)
         """
         self.delete("all")  # Canvas'ı temizle
 
@@ -56,34 +77,71 @@ class LineNumbers(tk.Canvas):
 
 class EditorFrame(tk.Frame):
     """
-    Editör frame'ini saran ana sınıf.
-    GCodeEditor widget'ını içerir ve dışarıya erişim sağlar.
+    Main frame wrapper for the editor component.
+
+    This class encapsulates the GCodeEditor widget and provides
+    a clean interface for external access. It serves as a container
+    that can be easily integrated into larger GUI applications.
+
+    Attributes:
+        editor (GCodeEditor): The actual G-code editor widget instance
     """
 
     def __init__(self, master=None, **kwargs):
+        """
+        Initialize the editor frame.
+
+        Args:
+            master: Parent widget (typically main window or container)
+            **kwargs: Additional keyword arguments passed to GCodeEditor
+        """
         super().__init__(master)
         self.editor = GCodeEditor(self, **kwargs)
 
     def get_editor(self):
         """
-        Editör örneğini döndürür.
-        :return: GCodeEditor instance
+        Get the editor instance.
+
+        Returns:
+            GCodeEditor: The G-code editor widget instance contained in this frame
         """
         return self.editor
 
 
 class GCodeEditor(tk.Text):
     """
-    G-code için özelleştirilmiş gelişmiş bir Tkinter Text widget'ı.
-    Otomatik tamamlama, satır numarası, tooltip ve sözdizimi vurgulama içerir.
+    Enhanced Tkinter Text widget customized for G-code editing.
+
+    This widget provides comprehensive G-code editing capabilities including:
+    - Auto-completion with G-code command suggestions
+    - Line numbers display
+    - Syntax highlighting for G-code letters
+    - Tooltips with command descriptions and error diagnostics
+    - Undo/redo functionality with intelligent grouping
+    - Keyboard shortcuts and navigation
+    - Integration with enhanced parser diagnostics
+
+    Attributes:
+        suggestions_window: Toplevel window for auto-completion suggestions
+        _suggestion_listbox: Listbox widget for suggestion display
+        tooltip: Toplevel window for command tooltips
+        keywords: Cached G-code command definitions
+        gcode_letters: Set of valid G-code parameter letters
     """
 
     def __init__(self, master=None, **kwargs):
-        # Varsayılan font ayarı
+        """
+        Initialize G-code editor with all features.
+
+        Args:
+            master: Parent widget (typically main window or frame)
+            **kwargs: Additional keyword arguments for Text widget
+        """
+        # Default font setting
         if "font" not in kwargs:
             kwargs["font"] = ("Courier", 14)
 
-        # Text widget'ı oluştur
+        # Create Text widget
         super().__init__(master, **kwargs)
 
         # Scrollbar ve line numbers
@@ -170,8 +228,15 @@ class GCodeEditor(tk.Text):
 
     def load_gcode_definitions(self):
         """
-        G-code tanımlarını JSON dosyasından yükler.
-        :return: dict, G-code anahtarları ve açıklamaları
+        Load G-code command definitions from JSON data file.
+
+        Reads the gcode_definitions.json file from the app/data directory
+        and returns a dictionary mapping G-code commands to their descriptions.
+        Uses class-level caching to avoid repeated file reads.
+
+        Returns:
+            dict: Dictionary with G-code commands as keys and descriptions as values.
+                 Returns empty dict if file cannot be loaded or parsed.
         """
         try:
             # Dosya yolunu belirle
@@ -189,8 +254,13 @@ class GCodeEditor(tk.Text):
 
     def get_current_word(self):
         """
-        İmleç pozisyonundaki kelimeyi döndürür.
-        :return: str, mevcut kelime
+        Get the current word at cursor position.
+
+        Extracts the word fragment from the beginning of the current line
+        up to the cursor position. Used for auto-completion context.
+
+        Returns:
+            str: The current word fragment at cursor position. Empty string if no word found.
         """
         current_line = self.get("insert linestart", "insert")
         match = re.search(r"[A-Za-z0-9]*$", current_line)
@@ -198,8 +268,14 @@ class GCodeEditor(tk.Text):
 
     def show_suggestions(self, event=None):
         """
-        Otomatik tamamlama önerilerini gösterir.
-        :param event: Klavye olayı (isteğe bağlı)
+        Show auto-completion suggestions based on current word.
+
+        Triggers on letter or space/backspace key releases. Finds matching
+        G-code commands that contain the current word fragment (case-insensitive)
+        and displays them in a suggestions window.
+
+        Args:
+            event: Keyboard event object (optional). Used to filter trigger events.
         """
         # Sadece harf veya silme tuşlarında tetiklenir
         if event and not (
@@ -221,8 +297,14 @@ class GCodeEditor(tk.Text):
 
     def show_suggestions_window(self, suggestions):
         """
-        Otomatik tamamlama öneri penceresini gösterir veya günceller.
-        :param suggestions: list, öneri anahtarları
+        Create or update the auto-completion suggestions popup window.
+
+        Displays a listbox with G-code command suggestions and their descriptions.
+        Handles window positioning to stay within screen bounds and updates
+        existing window if already open.
+
+        Args:
+            suggestions (list): List of G-code command keys to display as suggestions.
         """
 
         # Yardımcı: Görüntülenecek metni kısalt (uzun açıklamalar pencereyi taşırmasın)
@@ -315,8 +397,16 @@ class GCodeEditor(tk.Text):
 
     def navigate_suggestions(self, event):
         """
-        Ok tuşları ile öneriler arasında gezinmeyi sağlar.
-        :param event: Klavye olayı
+        Navigate through suggestions using arrow keys.
+
+        Handles Up/Down arrow key events to move selection in the
+        suggestions listbox. Prevents default arrow key behavior.
+
+        Args:
+            event: Keyboard event object containing the pressed key.
+
+        Returns:
+            str: "break" to prevent further event propagation.
         """
         if not self.suggestions_window or not self._suggestion_listbox:
             return "break"
@@ -336,8 +426,16 @@ class GCodeEditor(tk.Text):
 
     def handle_tab(self, event=None):
         """
-        Tab tuşuna basıldığında öneri uygular veya normal davranışı sürdürür.
-        :param event: Klavye olayı (isteğe bağlı)
+        Handle Tab key press for auto-completion.
+
+        If suggestions window is open, applies the selected suggestion.
+        Otherwise allows default Tab behavior.
+
+        Args:
+            event: Keyboard event object (optional).
+
+        Returns:
+            str or None: "break" if suggestion was applied, None for default behavior.
         """
         if self.suggestions_window:
             self.apply_selected_suggestion(event)
@@ -346,8 +444,13 @@ class GCodeEditor(tk.Text):
 
     def handle_click(self, event=None):
         """
-        Editöre tıklandığında öneri penceresini kapatır.
-        :param event: Mouse olayı (isteğe bağlı)
+        Handle mouse click events in the editor.
+
+        Closes the suggestions window when clicking outside of it.
+        Allows normal text selection and cursor positioning.
+
+        Args:
+            event: Mouse event object (optional).
         """
         if self.suggestions_window and self._suggestion_listbox:
             # Tıklama öneri penceresinde değilse kapat
@@ -360,8 +463,17 @@ class GCodeEditor(tk.Text):
 
     def apply_selected_suggestion(self, event=None):
         """
-        Seçili öneriyi editöre uygular.
-        :param event: Klavye veya mouse olayı (isteğe bağlı)
+        Apply the selected suggestion to the editor.
+
+        Replaces the current word fragment with the selected G-code command
+        and closes the suggestions window. Handles both double-click and
+        Enter key events.
+
+        Args:
+            event: Keyboard or mouse event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
         """
         if not self.suggestions_window or not self._suggestion_listbox:
             return "break"
@@ -381,8 +493,16 @@ class GCodeEditor(tk.Text):
 
     def close_suggestions(self, event=None):
         """
-        Otomatik tamamlama öneri penceresini kapatır.
-        :param event: Olay (isteğe bağlı)
+        Close the auto-completion suggestions window.
+
+        Destroys the suggestions popup and cleans up references.
+        Returns focus to the main editor.
+
+        Args:
+            event: Event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
         """
         if self.suggestions_window:
             self.suggestions_window.destroy()
@@ -393,9 +513,14 @@ class GCodeEditor(tk.Text):
 
     def show_tooltip(self, event=None):
         """
-        İmleçteki kelime için tooltip (ipucu) gösterir.
-        Enhanced parser diagnostiklerini de destekler.
-        :param event: Mouse olayı (isteğe bağlı)
+        Show tooltip with command description or diagnostic information.
+
+        Displays contextual help when hovering over G-code commands or
+        lines with parser diagnostics. Shows command descriptions from
+        the definitions file and enhanced parser error/warning details.
+
+        Args:
+            event: Mouse event object (optional). Used to get cursor position.
         """
         if self.tooltip:
             self.tooltip.destroy()
@@ -437,7 +562,7 @@ class GCodeEditor(tk.Text):
 
             # Tooltip'i fare pozisyonunun yanına yerleştir
             if hasattr(event, "x_root") and hasattr(event, "y_root"):
-                self.tooltip.geometry(f"+{event.x_root+15}+{event.y_root+10}")
+                self.tooltip.geometry(f"+{event.x_root + 15}+{event.y_root + 10}")
 
             # Tooltip penceresine hover efekti ekle
             def on_enter(e):
@@ -452,7 +577,18 @@ class GCodeEditor(tk.Text):
             frame.bind("<Leave>", on_leave)
 
     def _get_diagnostic_for_line(self, line_no):
-        """Enhanced parser diagnostik bilgisini belirtilen satır için getir."""
+        """
+        Get enhanced parser diagnostic information for a specific line.
+
+        Searches the last parse result for diagnostic data associated
+        with the given line number.
+
+        Args:
+            line_no (int): Line number to get diagnostics for.
+
+        Returns:
+            dict or None: Diagnostic information dictionary if found, None otherwise.
+        """
         if not hasattr(self, "last_parse_result") or not self.last_parse_result:
             return None
 
@@ -463,7 +599,17 @@ class GCodeEditor(tk.Text):
         return None
 
     def _show_diagnostic_info(self, parent_frame, diagnostic_info):
-        """Enhanced parser diagnostik bilgisini tooltip'te göster."""
+        """
+        Display enhanced parser diagnostic information in tooltip.
+
+        Creates formatted labels showing error/warning severity, category,
+        message, coordinate details, and suggestions within the tooltip frame.
+
+        Args:
+            parent_frame (tk.Frame): Parent frame to add diagnostic widgets to.
+            diagnostic_info (dict): Diagnostic information dictionary containing
+                                   severity, category, message, suggestions, etc.
+        """
         severity = diagnostic_info.get("severity", "info")
         category = diagnostic_info.get("category", "general")
         error_code = diagnostic_info.get("error_code", "")
@@ -547,7 +693,16 @@ class GCodeEditor(tk.Text):
                 suggest_item.pack(fill="x", padx=10, pady=1)
 
     def _show_command_info(self, parent_frame, command):
-        """G-code komut bilgisini tooltip'te göster."""
+        """
+        Display G-code command information in tooltip.
+
+        Shows the command name and its description, with code examples
+        formatted differently from regular description text.
+
+        Args:
+            parent_frame (tk.Frame): Parent frame to add command info widgets to.
+            command (str): G-code command key to display information for.
+        """
         command_label = tk.Label(
             parent_frame,
             text=command,
@@ -586,8 +741,16 @@ class GCodeEditor(tk.Text):
 
     def force_suggestions(self, event=None):
         """
-        Ctrl+Space ile öneri penceresini zorla gösterir.
-        :param event: Klavye olayı (isteğe bağlı)
+        Force display suggestions window using Ctrl+Space.
+
+        Shows all G-code commands that start with the current word fragment,
+        regardless of length. Provides manual trigger for auto-completion.
+
+        Args:
+            event: Keyboard event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
         """
         current_word = self.get_current_word()
         suggestions = [
@@ -601,31 +764,62 @@ class GCodeEditor(tk.Text):
 
     def cut(self, event=None):
         """
-        Kesme işlemini gerçekleştirir.
-        :param event: Olay (isteğe bağlı)
+        Perform cut operation.
+
+        Generates the standard Cut event to copy selected text to clipboard
+        and remove it from the editor.
+
+        Args:
+            event: Event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
         """
         self.event_generate("<<Cut>>")
         return "break"
 
     def copy(self, event=None):
         """
-        Kopyalama işlemini gerçekleştirir.
-        :param event: Olay (isteğe bağlı)
+        Perform copy operation.
+
+        Generates the standard Copy event to copy selected text to clipboard.
+
+        Args:
+            event: Event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
         """
         self.event_generate("<<Copy>>")
         return "break"
 
     def paste(self, event=None):
         """
-        Yapıştırma işlemini gerçekleştirir.
-        :param event: Olay (isteğe bağlı)
+        Perform paste operation.
+
+        Generates the standard Paste event to insert clipboard content at cursor.
+        Automatically adds undo separator for grouping.
+
+        Args:
+            event: Event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
         """
         self.event_generate("<<Paste>>")
         return "break"
 
     # === Undo/Redo API ===
     def enable_undo(self, max_undo: int = 1000):
-        """Yerleşik undo'yu etkinleştirir ve maxundo ayarlar."""
+        """
+        Enable built-in undo functionality and set maximum undo levels.
+
+        Configures the Text widget's undo system with specified limit.
+        Enables intelligent grouping of edit operations.
+
+        Args:
+            max_undo (int): Maximum number of undo operations to store. Defaults to 1000.
+        """
         self.undo_enabled = True
         self.max_undo = max_undo
         try:
@@ -635,7 +829,11 @@ class GCodeEditor(tk.Text):
             pass
 
     def disable_undo(self):
-        """Undo'yu devre dışı bırakır."""
+        """
+        Disable undo functionality.
+
+        Turns off the Text widget's undo system and clears undo state.
+        """
         self.undo_enabled = False
         try:
             self.configure(undo=False)
@@ -643,7 +841,14 @@ class GCodeEditor(tk.Text):
             pass
 
     def undo(self) -> bool:
-        """Bir adım geri alır; başarılıysa True döner."""
+        """
+        Perform one undo operation.
+
+        Reverts the last edit action in the undo stack.
+
+        Returns:
+            bool: True if undo was successful, False if no undo available.
+        """
         try:
             self.edit_undo()
             return True
@@ -651,7 +856,14 @@ class GCodeEditor(tk.Text):
             return False
 
     def redo(self) -> bool:
-        """Bir adım ileri alır; başarılıysa True döner."""
+        """
+        Perform one redo operation.
+
+        Reapplies the last undone action from the redo stack.
+
+        Returns:
+            bool: True if redo was successful, False if no redo available.
+        """
         try:
             self.edit_redo()
             return True
@@ -659,14 +871,23 @@ class GCodeEditor(tk.Text):
             return False
 
     def add_undo_separator(self):
-        """Undo yığınına ayırıcı ekler (gruplama)."""
+        """
+        Add separator to undo stack for grouping.
+
+        Creates a boundary in the undo history to group related edits.
+        Used for intelligent undo/redo behavior.
+        """
         try:
             self.edit_separator()
         except Exception:
             pass
 
     def clear_history(self):
-        """Undo/redo geçmişini temizler."""
+        """
+        Clear the entire undo/redo history.
+
+        Resets the edit stack, removing all stored undo and redo operations.
+        """
         try:
             self.edit_reset()
         except Exception:
@@ -674,54 +895,83 @@ class GCodeEditor(tk.Text):
 
     # === Internal helpers ===
     def _on_undo(self, event=None):
-        self.undo()
-        return "break"
+        """
+        Internal handler for undo keyboard shortcuts.
+
+        Handles Ctrl+Z and Command+Z key combinations to trigger undo.
+
+        Args:
+            event: Keyboard event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
+        """
 
     def _on_redo(self, event=None):
-        self.redo()
-        return "break"
+        """
+        Internal handler for redo keyboard shortcuts.
+
+        Handles Ctrl+Y, Ctrl+Shift+Z, and Shift+Command+Z key combinations
+        to trigger redo.
+
+        Args:
+            event: Keyboard event object (optional).
+
+        Returns:
+            str: "break" to prevent further event propagation.
+        """
 
     def _on_paste(self, event=None):
-        # Yapıştırmadan sonra bir ayırıcı ekle
-        self.add_undo_separator()
-        self._mark_edited()
+        """
+        Internal handler for paste operations.
+
+        Adds undo separator after paste to group the pasted content
+        as a single operation and marks the edit timestamp.
+
+        Args:
+            event: Paste event object (optional).
+        """
 
     def _on_focus_out(self, event=None):
-        # Odak kaybında ayırıcı ekle
-        self.add_undo_separator()
+        """
+        Internal handler for focus loss events.
+
+        Adds undo separator when editor loses focus to create a boundary
+        between editing sessions.
+
+        Args:
+            event: Focus out event object (optional).
+        """
 
     def _mark_edited(self):
-        self._last_edit_ts = time.time()
-        self._tick_edit_timer()
+        """
+        Mark the current time as an edit operation.
+
+        Updates the last edit timestamp and starts the edit timer
+        for intelligent undo grouping.
+        """
 
     def _tick_edit_timer(self):
-        # Var olan zamanlayıcıyı iptal et
-        if getattr(self, "_idle_sep_after_id", None) is not None:
-            try:
-                if self._idle_sep_after_id is not None:
-                    self.after_cancel(self._idle_sep_after_id)
-            except Exception:
-                pass
-            self._idle_sep_after_id = None
+        """
+        Manage the edit timer for intelligent undo grouping.
 
-        # Yeniden planla
-        def _maybe_sep():
-            if (
-                self._last_edit_ts
-                and (time.time() - self._last_edit_ts) * 1000.0
-                >= self.group_threshold_ms
-            ):
-                self.add_undo_separator()
-                self._idle_sep_after_id = None
-            else:
-                self._idle_sep_after_id = self.after(50, _maybe_sep)
-
-        self._idle_sep_after_id = self.after(50, _maybe_sep)
+        Cancels any existing timer and schedules a new check. If the time
+        since the last edit exceeds the group threshold, adds an undo
+        separator to create a grouping boundary.
+        """
 
     def handle_keypress(self, event):
         """
-        Tuş basımlarını yönetir, G-code harflerini işler.
-        :param event: Klavye olayı
+        Handle key press events for special behaviors.
+
+        Processes G-code letters to auto-capitalize them, handles suggestion
+        window navigation, and marks edit timestamps for undo grouping.
+
+        Args:
+            event: Keyboard event object containing pressed key information.
+
+        Returns:
+            str or None: "break" for handled special keys, None for default behavior.
         """
         char = event.char.lower()
         if char in self.gcode_letters:
@@ -743,9 +993,16 @@ class GCodeEditor(tk.Text):
 
     def insert(self, index, chars, *args):
         """
-        Text widget insert metodunu override eder, G-code harflerini büyük harfe çevirir.
-        :param index: Ekleme konumu
-        :param chars: Eklenecek karakterler
+        Override Text widget insert method with G-code letter processing.
+
+        Automatically capitalizes G-code letters, adds undo separators for
+        multi-character inserts, applies syntax highlighting, and updates
+        edit timestamps for grouping.
+
+        Args:
+            index: Position index where text should be inserted.
+            chars: Text string to insert.
+            *args: Additional arguments passed to parent insert method.
         """
         # Uzun metin eklemelerinde (>=2 karakter) ayrı bir undo bloğu başlat
         try:
@@ -765,7 +1022,7 @@ class GCodeEditor(tk.Text):
         for offset, ch in enumerate(transformed):
             if ch.lower() in self.gcode_letters:
                 start = f"{start_index}+{offset}c"
-                end = f"{start_index}+{offset+1}c"
+                end = f"{start_index}+{offset + 1}c"
                 self.tag_add("gcode_letter", start, end)
 
         # Programatik eklemeden sonra düzenleme zamanını güncelle
@@ -773,8 +1030,13 @@ class GCodeEditor(tk.Text):
 
     def handle_keyrelease(self, event=None):
         """
-        Tuş bırakıldığında çalışır, otomatik tamamlama tetikleyebilir.
-        :param event: Klavye olayı (isteğe bağlı)
+        Handle key release events for auto-completion.
+
+        Triggers line highlighting and auto-completion suggestions
+        when non-whitespace characters are released.
+
+        Args:
+            event: Keyboard event object (optional).
         """
         if event and hasattr(event, "char") and event.char and not event.char.isspace():
             self.highlight_current_line()
@@ -782,16 +1044,31 @@ class GCodeEditor(tk.Text):
 
     def handle_space(self, event=None):
         """
-        Boşluk tuşuna basıldığında çalışır, satırı vurgular.
-        :param event: Klavye olayı (isteğe bağlı)
+        Handle space key press events.
+
+        Triggers current line highlighting when space is pressed.
+
+        Args:
+            event: Keyboard event object (optional).
+
+        Returns:
+            None: Allows default space key behavior.
         """
         self.highlight_current_line()
         return None
 
     def handle_return(self, event=None):
         """
-        Enter tuşuna basıldığında çalışır, satırı vurgular ve öneri uygular.
-        :param event: Klavye olayı (isteğe bağlı)
+        Handle Enter key press events.
+
+        Applies selected suggestion if window is open, otherwise adds
+        undo separator and highlights current line.
+
+        Args:
+            event: Keyboard event object (optional).
+
+        Returns:
+            str or None: "break" if suggestion was applied, None for default behavior.
         """
         if self.suggestions_window:
             self.apply_selected_suggestion(event)
@@ -802,16 +1079,30 @@ class GCodeEditor(tk.Text):
         return None
 
     def clear_diagnostics(self):
-        """Tüm hata/uyarı vurgularını temizler."""
+        """
+        Clear all error and warning line highlights.
+
+        Removes error_line and warning_line tags from the entire text
+        to reset diagnostic highlighting.
+        """
         self.tag_remove("error_line", "1.0", tk.END)
         self.tag_remove("warning_line", "1.0", tk.END)
 
     def annotate_parse_result(self, result):
         """
-        parse_gcode çıktısına göre satırları hata/uyarı olarak vurgular.
-        Enhanced parser'ın yeni diagnostik yapısını destekler.
-        :param result: dict, {'paths': [...], 'layers': [...]}
-        :return: dict, {'errors': int, 'warnings': int}
+        Annotate editor with parser error and warning highlights.
+
+        Processes parse result to highlight lines with errors or warnings.
+        Supports enhanced parser diagnostic structure with detailed error
+        information, coordinate warnings, and suggestions.
+
+        Args:
+            result (dict): Parser output containing 'paths' and 'layers' data.
+                          Each path may contain diagnostic information.
+
+        Returns:
+            dict: Summary with counts of errors and warnings found.
+                 Format: {'errors': int, 'warnings': int}
         """
         self.clear_diagnostics()
 
@@ -897,9 +1188,12 @@ class GCodeEditor(tk.Text):
 
     def highlight_current_line(self):
         """
-        Mevcut satırı vurgular.
+        Highlight G-code letters in the current line.
+
+        Clears existing gcode_letter tags from the current line and
+        reapplies them to all G-code parameter letters (G, X, Y, Z, M, etc.).
+        Provides real-time syntax highlighting as the user types.
         """
-        """Mevcut satırdaki G-code harflerini vurgula"""
         # Mevcut satırı al
         current_line = self.get("insert linestart", "insert lineend")
 
@@ -911,28 +1205,40 @@ class GCodeEditor(tk.Text):
         for char in current_line:
             if char.lower() in self.gcode_letters:
                 start = f"insert linestart+{pos}c"
-                end = f"insert linestart+{pos+1}c"
+                end = f"insert linestart+{pos + 1}c"
                 self.tag_add("gcode_letter", start, end)
             pos += 1
 
     def highlight_all_text(self):
         """
-        Tüm metni vurgular.
+        Highlight G-code letters throughout the entire text.
+
+        Scans the complete editor content and applies gcode_letter tags
+        to all G-code parameter letters. Used for initial syntax highlighting
+        when loading files or refreshing the display.
         """
-        """Tüm metindeki G-code harflerini vurgula"""
         content = self.get("1.0", tk.END)
         for i, char in enumerate(content):
             if char.lower() in self.gcode_letters:
                 start = f"1.0+{i}c"
-                end = f"1.0+{i+1}c"
+                end = f"1.0+{i + 1}c"
                 self.tag_add("gcode_letter", start, end)
 
 
 def create_text_editor(root):
     """
-    Gelişmiş G-code editörünü oluşturur ve döndürür.
-    :param root: Tkinter ana pencere veya frame
-    :return: EditorFrame instance
+    Create and return an enhanced G-code editor widget.
+
+    Factory function that creates an EditorFrame containing a fully
+    configured GCodeEditor with all features enabled including line
+    numbers, auto-completion, syntax highlighting, and undo/redo.
+
+    Args:
+        root: Tkinter root window or parent frame to contain the editor.
+
+    Returns:
+        EditorFrame: Frame widget containing the configured G-code editor.
+                     Use get_editor() method to access the actual GCodeEditor.
     """
     frame = EditorFrame(root, wrap=tk.NONE, undo=True)
     return frame

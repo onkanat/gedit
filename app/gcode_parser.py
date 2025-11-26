@@ -12,9 +12,30 @@ class ModalState:
     """
     Tracks modal G-code states that persist across lines.
     Based on industry standard CNC modal groups.
+
+    This class maintains the current state of all modal G-code commands
+    that affect subsequent lines until explicitly changed. It follows
+    standard CNC modal group classifications:
+
+    Attributes:
+        motion (str): Current motion mode (G0/G1/G2/G3)
+        plane (str): Current plane selection (G17/G18/G19)
+        distance (str): Positioning mode (G90/G91)
+        feed_mode (str): Feed rate mode (G94/G95)
+        units (str): Unit system (G20/G21)
+        coord_system (str): Work coordinate system (G54-G59)
+        spindle (Optional[str]): Spindle state (M3/M4/M5/M6)
+        coolant (Optional[str]): Coolant state (M7/M8/M9)
     """
 
     def __init__(self):
+        """
+        Initialize modal state with default CNC values.
+
+        Sets up all modal groups with their standard default values
+        according to CNC machine conventions. These defaults represent
+        the most common starting state for CNC controllers.
+        """
         # Modal Group 1 - Motion
         self.motion = "G0"  # G0 (rapid), G1 (feed), G2 (CW arc), G3 (CCW arc)
 
@@ -38,7 +59,15 @@ class ModalState:
         self.coolant: Optional[str] = None  # M7, M8, M9 or None
 
     def copy(self) -> "ModalState":
-        """Create a deep copy of the modal state."""
+        """
+        Create a deep copy of the modal state.
+
+        Returns:
+            ModalState: A new ModalState instance with identical values
+                       to the current state. This is useful for preserving
+                       state snapshots at different points in the G-code
+                       program execution.
+        """
         new_state = ModalState()
         new_state.motion = self.motion
         new_state.plane = self.plane
@@ -51,7 +80,14 @@ class ModalState:
         return new_state
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert modal state to dictionary for path entries."""
+        """
+        Convert modal state to dictionary for path entries.
+
+        Returns:
+            Dict[str, Any]: Dictionary representation of the current modal state.
+                          Used to attach state information to path entries for
+                          debugging and analysis purposes.
+        """
         return {
             "motion": self.motion,
             "plane": self.plane,
@@ -77,13 +113,17 @@ def validate_ijk_parameters(
 ) -> None:
     """
     Validate IJK parameters for arcs.
-    Issues warnings for very large IJK values.
+    Issues warnings for very large IJK values that may indicate
+    incorrect arc specifications or programming errors.
 
     Args:
-        params: Dictionary of G-code parameters
-        line_no: Line number for diagnostics
-        original_line: Original line text for diagnostics
-        add_diag_fn: Function to add diagnostic entries
+        params (Dict[str, float]): Dictionary of G-code parameters containing I, J, K values
+        line_no (int): Line number for diagnostics reporting
+        original_line (str): Original line text for diagnostics context
+        add_diag_fn (Callable): Function to add diagnostic entries to the parser output
+
+    Returns:
+        None: Function adds warnings through add_diag_fn when issues are detected
     """
     ijk_params = {"I": params.get("I"), "J": params.get("J"), "K": params.get("K")}
 
@@ -106,13 +146,19 @@ def validate_coordinates(
 ) -> None:
     """
     Validate coordinate bounds and precision.
-    Issues warnings for extreme coordinates.
+    Issues warnings for extreme coordinates that may indicate
+    programming errors or machine capability issues.
 
     Args:
-        x, y, z: Coordinate values to validate
-        line_no: Line number for diagnostics
-        original_line: Original line text for diagnostics
-        add_diag_fn: Function to add diagnostic entries
+        x (float): X coordinate value to validate
+        y (float): Y coordinate value to validate
+        z (float): Z coordinate value to validate
+        line_no (int): Line number for diagnostics reporting
+        original_line (str): Original line text for diagnostics context
+        add_diag_fn (Callable): Function to add diagnostic entries to the parser output
+
+    Returns:
+        None: Function adds warnings through add_diag_fn when coordinates exceed bounds
     """
     coords = {"X": x, "Y": y, "Z": z}
 
@@ -160,14 +206,21 @@ def calculate_arc_data(
     - Geometric validation
 
     Args:
-        params: Dictionary of G-code parameters
-        plane: Current plane (G17/G18/G19)
-        start_pos: Starting position (x, y, z)
-        end_pos: Ending position (x, y, z)
-        motion_command: G2 or G3
+        params (Dict[str, float]): Dictionary of G-code parameters (R, I, J, K values)
+        plane (str): Current plane selection (G17/G18/G19)
+        start_pos (Tuple[float, float, float]): Starting position (x, y, z)
+        end_pos (Tuple[float, float, float]): Ending position (x, y, z)
+        motion_command (str): Arc motion command (G2 for clockwise, G3 for counter-clockwise)
 
     Returns:
-        Dictionary containing arc calculation data
+        Dict[str, Any]: Dictionary containing comprehensive arc calculation data including:
+            - method: "R" or "IJK" indicating calculation method used
+            - radius: Calculated arc radius
+            - center_offset: Center offset values
+            - validation_errors: List of validation error messages
+            - direction: "CW" or "CCW" arc direction
+            - validation: Dictionary with geometric and tolerance check results
+            - overridden_params: Parameters that were ignored due to precedence rules
     """
     arc_data = {
         "method": None,
@@ -358,10 +411,15 @@ def analyze_program_structure(lines: List[str]) -> Dict[str, Any]:
     Detects headers, footers, metadata, subroutines, and program flow.
 
     Args:
-        lines: List of G-code lines
+        lines (List[str]): List of G-code lines to analyze
 
     Returns:
-        Dictionary containing program structure information
+        Dict[str, Any]: Dictionary containing comprehensive program structure information:
+            - header: Dictionary with detected header comments and metadata
+            - footer: Dictionary with detected footer comments and end commands
+            - metadata: Extracted key-value pairs from header comments
+            - subroutines: Lists of subroutine definitions and calls
+            - program_flow: Analysis of setup commands, tool changes, coordinate systems, etc.
     """
     program_info = {
         "header": {"comments": [], "lines": [], "detected": False},
@@ -503,15 +561,26 @@ def analyze_program_structure(lines: List[str]) -> Dict[str, Any]:
 
 def parse_gcode(code):
     """
-    G-code metnini ayrıştırır ve yolları/layer bilgilerini döndürür.
-    Modal komutlar, birim sistemi, koordinat sistemi ve spindle durumu gibi CNC modalitelerini izler.
+    Parse G-code text and return paths/layer information.
+    Tracks CNC modalities including modal commands, unit system, coordinate system, and spindle state.
+
+    Args:
+        code (str): G-code text to parse
+
+    Returns:
+        dict: Dictionary with keys:
+            - 'paths': list[dict] - Movement commands (rapid/feed/arc) and diagnostics
+                                   (parse_error/unsupported/unknown_param etc.)
+            - 'layers': list[dict] - Layer information and associated paths
+            - 'program_info': dict - Program structure analysis including headers, footers, metadata
 
     Contract:
-    - Input: code (str)
-    - Output: dict with keys:
-        - 'paths': list[dict]  -> hareketler (rapid/feed/arc) ve tanılar (parse_error/unsupported/unknown_param vs.)
-        - 'layers': list[dict] -> layer bilgileri
-    - Her entry mümkünse 'line_no' ve 'line' (raw) içerir. Tanılar ek olarak 'message' içerir.
+        - Each entry includes 'line_no' and 'line' (raw) when possible
+        - Diagnostic entries additionally include 'message' field
+        - Modal state is tracked across all lines according to CNC standards
+        - Arc processing follows R>IJK precedence with plane-specific validation
+        - Error recovery continues parsing after encountering issues
+        - Coordinate bounds validation is performed with configurable limits
     """
     paths: list[dict] = []
     layers: list[dict] = []
