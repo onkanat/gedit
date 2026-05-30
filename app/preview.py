@@ -1,3 +1,5 @@
+
+
 import tkinter as tk
 import sys
 import os
@@ -42,8 +44,13 @@ def show_preview(editor, root):
     # 2D ve 3D preview pencerelerini oluştur
     preview_window_2d = tk.Toplevel(root)
     preview_window_2d.title("G-code Preview")
+    preview_window_2d.transient(root)
+    preview_window_2d.lift()
+    
     preview_window_3d = tk.Toplevel(root)
     preview_window_3d.title("3D Preview")
+    preview_window_3d.transient(root)
+    preview_window_3d.lift()
 
     # 2D kontrol çubuğu ve canvas
     ctrl_frame = tk.Frame(preview_window_2d)
@@ -553,6 +560,12 @@ def show_preview(editor, root):
     # Başlangıçta çizimler
     draw_2d(paths, None)
     draw_3d(paths)
+
+    # MacOS ve diğer platformlarda pencereleri ön plana çıkar ve odaklanmasını sağla
+    preview_window_2d.lift()
+    preview_window_3d.lift()
+    preview_window_2d.focus_force()
+    preview_window_3d.focus_force()
 
     def on_plane_change(*_):
         global _LAST_PLANE_SELECTION

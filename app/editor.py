@@ -37,6 +37,7 @@ class LineNumbers(tk.Canvas):
         self.text_widget.bind("<KeyRelease>", self.redraw)
         self.text_widget.bind("<MouseWheel>", self.redraw)
         self.text_widget.bind("<Configure>", self.redraw)
+        self.text_widget.bind("<ButtonRelease-1>", self.redraw)
 
     def redraw(self, *args):
         """
@@ -71,8 +72,6 @@ class LineNumbers(tk.Canvas):
                     fill="gray50",
                     font=self.text_widget["font"],
                 )
-
-        self.after(10, self.redraw)  # Periyodik güncelleme
 
 
 class EditorFrame(tk.Frame):
@@ -146,8 +145,14 @@ class GCodeEditor(tk.Text):
 
         # Scrollbar ve line numbers
         self.scrollbar = ttk.Scrollbar(master, orient="vertical", command=self.yview)
-        self.configure(yscrollcommand=self.scrollbar.set)
         self.line_numbers = LineNumbers(master, self, bg="#f0f0f0")
+
+        def on_scroll(*args):
+            self.scrollbar.set(*args)
+            if hasattr(self, "line_numbers"):
+                self.line_numbers.redraw()
+
+        self.configure(yscrollcommand=on_scroll)
 
         # Widget'ları yerleştir
         self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
