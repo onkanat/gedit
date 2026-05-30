@@ -7,13 +7,13 @@ set -e
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-FEATURE_DIR="$REPO_ROOT/specs/$CURRENT_BRANCH"
+FEATURE_DIR="$REPO_ROOT/.agents/specs/$CURRENT_BRANCH"
 NEW_PLAN="$FEATURE_DIR/plan.md"
 
 # Determine which agent context files to update
-CLAUDE_FILE="$REPO_ROOT/CLAUDE.md"
-GEMINI_FILE="$REPO_ROOT/GEMINI.md"
-COPILOT_FILE="$REPO_ROOT/.github/copilot-instructions.md"
+CLAUDE_FILE="$REPO_ROOT/.agents/CLAUDE.md"
+GEMINI_FILE="$REPO_ROOT/.agents/GEMINI.md"
+COPILOT_FILE="$REPO_ROOT/.agents/copilot-instructions.md"
 
 # Allow override via argument
 AGENT_TYPE="$1"

@@ -27,7 +27,7 @@ check_feature_branch() {
 get_feature_dir() {
     local repo_root="$1"
     local branch="$2"
-    echo "$repo_root/specs/$branch"
+    echo "$repo_root/.agents/specs/$branch"
 }
 
 # Get all standard paths for a feature
