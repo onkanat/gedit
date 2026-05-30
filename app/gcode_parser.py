@@ -102,7 +102,7 @@ class ModalState:
 
 
 class Coordinate(dict):
-    """Case-insensitive coordinate dictionary supporting both uppercase and lowercase access."""
+    """Case-insensitive coordinate dictionary supporting both uppercase/lowercase string keys and integer index access."""
     def __init__(self, x=None, y=None, z=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if x is not None:
@@ -121,6 +121,11 @@ class Coordinate(dict):
             self["Z"] = 0.0
 
     def __getitem__(self, key):
+        if isinstance(key, int):
+            if key == 0: return super().__getitem__("X")
+            if key == 1: return super().__getitem__("Y")
+            if key == 2: return super().__getitem__("Z")
+            raise IndexError("Coordinate index out of range")
         if isinstance(key, str):
             ukey = key.upper()
             if ukey in ("X", "Y", "Z"):
@@ -128,6 +133,12 @@ class Coordinate(dict):
         return super().__getitem__(key)
 
     def __setitem__(self, key, value):
+        if isinstance(key, int):
+            if key == 0: super().__setitem__("X", float(value))
+            elif key == 1: super().__setitem__("Y", float(value))
+            elif key == 2: super().__setitem__("Z", float(value))
+            else: raise IndexError("Coordinate index out of range")
+            return
         if isinstance(key, str):
             ukey = key.upper()
             if ukey in ("X", "Y", "Z"):
@@ -136,6 +147,8 @@ class Coordinate(dict):
         super().__setitem__(key, value)
 
     def __contains__(self, key):
+        if isinstance(key, int):
+            return 0 <= key < 3
         if isinstance(key, str):
             ukey = key.upper()
             if ukey in ("X", "Y", "Z"):
@@ -143,6 +156,10 @@ class Coordinate(dict):
         return super().__contains__(key)
 
     def get(self, key, default=None):
+        if isinstance(key, int):
+            if 0 <= key < 3:
+                return self[key]
+            return default
         if isinstance(key, str):
             ukey = key.upper()
             if ukey in ("X", "Y", "Z"):

@@ -154,7 +154,12 @@ def show_preview(editor, root):
             ):
                 continue
             try:
-                start_x, start_y, start_z = path["start"]
+                if isinstance(path["start"], dict):
+                    start_x = path["start"].get("X", 0.0)
+                    start_y = path["start"].get("Y", 0.0)
+                    start_z = path["start"].get("Z", 0.0)
+                else:
+                    start_x, start_y, start_z = path["start"]
                 # Enhanced parser uses different formats for end coordinates
                 if "end_tuple" in path:
                     end_x, end_y, end_z = path["end_tuple"]
@@ -313,7 +318,12 @@ def show_preview(editor, root):
             ):
                 continue
             try:
-                start_x, start_y, start_z = path["start"]
+                if isinstance(path["start"], dict):
+                    start_x = path["start"].get("X", 0.0)
+                    start_y = path["start"].get("Y", 0.0)
+                    start_z = path["start"].get("Z", 0.0)
+                else:
+                    start_x, start_y, start_z = path["start"]
                 # Enhanced parser uses different formats for end coordinates
                 if "end_tuple" in path:
                     end_x, end_y, end_z = path["end_tuple"]
@@ -438,7 +448,12 @@ def show_preview(editor, root):
             ):
                 continue
             try:
-                start_x, start_y, start_z = path["start"]
+                if isinstance(path["start"], dict):
+                    start_x = path["start"].get("X", 0.0)
+                    start_y = path["start"].get("Y", 0.0)
+                    start_z = path["start"].get("Z", 0.0)
+                else:
+                    start_x, start_y, start_z = path["start"]
                 # Enhanced parser uses different formats for end coordinates
                 if "end_tuple" in path:
                     end_x, end_y, end_z = path["end_tuple"]
