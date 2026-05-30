@@ -231,8 +231,22 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.title("CNC G Code Editor")
 
-    # Pencere boyutunu ayarla
-    root.geometry("800x600")
+    # Centering window on screen with high-DPI platform awareness
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    
+    is_macos = root.tk.call('tk', 'windowingsystem') == 'aqua'
+    if is_macos:
+        width = 1200
+        height = 800
+    else:
+        width = 1000
+        height = 700
+        
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+    root.geometry(f"{width}x{height}+{x}+{y}")
+    root.minsize(900, 600)
 
     # Editor frame'i oluştur
     editor_frame = create_text_editor(root)
