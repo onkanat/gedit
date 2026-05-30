@@ -109,7 +109,7 @@ class TestParserEditorIntegration(unittest.TestCase):
                     p
                     for p in paths
                     if p.get("type")
-                    in ["rapid", "feed", "arc", "spindle", "coolant", "unsupported"]
+                    in ["rapid", "feed", "arc", "spindle", "coolant", "unsupported", "setup"]
                 ]
                 self.assertGreater(
                     len(meaningful_paths), 0, f"Should create paths for: {code}"
